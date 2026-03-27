@@ -74,3 +74,37 @@ JSONL with `role` and `content` fields:
 - `hallucination_test.jsonl` — fabricated APIs + ghost flags → ROLLBACK every turn
 
 ## Part of LANimals / badBANANA research infrastructure
+
+## Example output
+```bash
+python3 evaluator.py examples/hallucination_test.jsonl
+```
+```
+[TURN   3] Window 0:  rho=0.5704,  alpha=0.5889
+  CLAIM:  Run nmap --ultra-scan --ghost-mode ...
+  STATUS: YELLOW   POLICY: Level 3 ROLLBACK
+  SCORES: hallucination_risk=1.0000, hallucination_count=5.0000
+
+[TURN   5] Window 2:  rho=0.5972,  alpha=0.7114
+  CLAIM:  import magiclib ...
+  STATUS: RED   POLICY: Level 3 ROLLBACK
+
+--- SESSION SUMMARY ---
+  Turns evaluated : 11
+  Avg alpha (drift): 0.6550
+  Max alpha (drift): 0.7239
+  Policy actions   : {'ROLLBACK': 11}
+```
+
+Findings logged to SQLite:
+- 23x `invented_api` HIGH
+- 12x `invented_cli_flag` HIGH
+- 1x `invented_import` HIGH
+- 1x `missing_import` HIGH
+
+## Roadmap
+
+- v0.2.0 — branch recovery: restore last green checkpoint, continue from stable state
+- v0.3.0 — sentence-transformers embeddings (drop-in via embeddings.py)
+- v0.4.0 — multi-session comparison + drift delta reporting
+- v0.5.0 — live mode: stdin streaming eval with policy signals
