@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.py[cod]
+verifier/__pycache__/
+data/drift.db
+logs/
+*.log
+.env
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.DS_Store
