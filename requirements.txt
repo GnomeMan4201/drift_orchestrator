@@ -1,0 +1,3 @@
+# drift_orchestrator -- stdlib only, no pip deps required
+# optional: sentence-transformers>=2.2.0
+# optional: rich>=13.0.0
