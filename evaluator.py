@@ -53,7 +53,7 @@ def _collect_red_findings(imp, sig, cli, hal):
     return all_findings
 
 
-def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True):
+def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _top_level=True):
     if not turns:
         print("No turns to evaluate.")
         return
@@ -161,7 +161,7 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True):
             print(f"[ROLLBACK] Reason: {reason}")
             from recovery import recover, recovery_summary
             recover(session_id, branch_id, evaluate_turns, report=report)
-            if report:
+            if report and _top_level:
                 recovery_summary(session_id)
             return
 

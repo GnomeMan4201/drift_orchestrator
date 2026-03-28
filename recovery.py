@@ -55,7 +55,8 @@ def recover(session_id, branch_id, evaluator_fn, report=True):
             branch_id=new_branch_id,
             turns=turn_data,
             start_index=restored_at + 1,
-            report=report
+            report=report,
+            _top_level=False
         )
 
     return new_branch_id, restored_at
