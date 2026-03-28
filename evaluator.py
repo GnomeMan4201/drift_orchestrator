@@ -40,7 +40,6 @@ def _run_verifiers(text):
 
 
 def _collect_red_findings(imp, sig, cli, hal):
-    from policy import RED_FINDING_TYPES
     all_findings = []
     for mod, res in imp["imports"].items():
         if res["status"] == "missing":
@@ -54,46 +53,36 @@ def _collect_red_findings(imp, sig, cli, hal):
     return all_findings
 
 
-def evaluate_jsonl(path, report=True):
-    init_db()
-    records = load_jsonl(path)
-
-    turns_data = []
-    for r in records:
-        role = r.get("role", "user")
-        content = r.get("content", "")
-        if content:
-            turns_data.append({"role": role, "content": content})
-
-    if not turns_data:
-        print("No turns found in input.")
+def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _top_level=True):
+    if not turns:
+        print("No turns to evaluate.")
         return
 
-    session_id, branch_id = create_session(meta={"source": path})
-
-    turn_ids = []
-    for t in turns_data:
-        tid, idx = append_turn(session_id, branch_id, t["role"], t["content"])
-        turn_ids.append((tid, idx))
-
-    anchor_text = turns_data[0]["content"] if turns_data else ""
-    goal_text   = turns_data[-1]["content"] if turns_data else ""
+    anchor_text = turns[0]["content"] if turns else ""
+    goal_text   = turns[-1]["content"] if turns else ""
 
     scorer = CompositeDensityScorer()
     engine = PolicyEngine()
 
-    windows = sliding_token_windows(turns_data, window_size=WINDOW_SIZE, step=STEP)
+    all_turn_ids = []
+    for t in turns:
+        tid, idx = append_turn(session_id, branch_id, t["role"], t["content"])
+        all_turn_ids.append((tid, idx))
+
+    windows = sliding_token_windows(turns, window_size=WINDOW_SIZE, step=STEP)
+    rollback_occurred = False
 
     for window_index, (start_i, window_turns) in enumerate(windows):
         texts = [t["content"] for t in window_turns]
-        last_turn_index = start_i + len(window_turns) - 1
-        last_tid = turn_ids[last_turn_index][0] if last_turn_index < len(turn_ids) else uid()
+        last_turn_index = start_index + start_i + len(window_turns) - 1
+        local_last = start_i + len(window_turns) - 1
+        last_tid = all_turn_ids[local_last][0] if local_last < len(all_turn_ids) else uid()
 
         rho_density, breakdown = scorer.score(texts)
         window_text = " ".join(texts)
 
-        d_goal   = goal_drift(goal_text, window_text)
-        d_anch   = anchor_drift(anchor_text, window_text)
+        d_goal    = goal_drift(goal_text, window_text)
+        d_anch    = anchor_drift(anchor_text, window_text)
         rep_score = compute_repetition_score(texts)
 
         imp, sig, cli, hal, verify_risk = _run_verifiers(window_text)
@@ -162,14 +151,45 @@ def evaluate_jsonl(path, report=True):
         emit_hallucination_findings(session_id, last_tid, hal)
         emit_policy_finding(session_id, last_tid, action, alpha, reason)
 
-        if action == "CONTINUE" and alpha < 0.35:
+        if action == "CONTINUE" and alpha < 0.50:
             create_checkpoint(session_id, branch_id, last_turn_index, status="green")
+            print(f"[CHECKPOINT] GREEN saved at turn {last_turn_index}")
+
+        if action == "ROLLBACK" and not rollback_occurred:
+            rollback_occurred = True
+            print(f"\n[ROLLBACK] Triggered at turn {last_turn_index} alpha={alpha:.4f}")
+            print(f"[ROLLBACK] Reason: {reason}")
+            from recovery import recover, recovery_summary
+            recover(session_id, branch_id, evaluate_turns, report=report)
+            if report and _top_level:
+                recovery_summary(session_id)
+            return
 
     if report:
         from report import print_drift_map, print_summary
         print_drift_map(session_id, branch_id)
         print_summary(session_id)
 
+
+def evaluate_jsonl(path, report=True):
+    init_db()
+    records = load_jsonl(path)
+
+    turns_data = []
+    for r in records:
+        role = r.get("role", "user")
+        content = r.get("content", "")
+        if content:
+            turns_data.append({"role": role, "content": content})
+
+    if not turns_data:
+        print("No turns found in input.")
+        return
+
+    session_id, branch_id = create_session(meta={"source": path})
+    print(f"[SESSION] {session_id[:8]}... branch={branch_id[:8]}...")
+
+    evaluate_turns(session_id, branch_id, turns_data, start_index=0, report=report)
     return session_id, branch_id
 
 
