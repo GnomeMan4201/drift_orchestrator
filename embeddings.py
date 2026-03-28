@@ -1,8 +1,38 @@
-import hashlib
 import math
+import os
+
+_model = None
+_model_name = "all-MiniLM-L6-v2"
+_use_stub = False
 
 
-def _text_to_hash_vector(text, dim=64):
+def _get_model():
+    global _model, _use_stub
+    if _model is not None:
+        return _model
+    try:
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer(_model_name)
+        _use_stub = False
+    except Exception:
+        _use_stub = True
+        _model = None
+    return _model
+
+
+def embed(text):
+    model = _get_model()
+    if _use_stub or model is None:
+        return _stub_embed(text)
+    try:
+        vec = model.encode(text, normalize_embeddings=True).tolist()
+        return vec
+    except Exception:
+        return _stub_embed(text)
+
+
+def _stub_embed(text, dim=64):
+    import hashlib
     tokens = text.lower().split()
     vec = [0.0] * dim
     for token in tokens:
@@ -12,10 +42,6 @@ def _text_to_hash_vector(text, dim=64):
             vec[i] += 1.0 if bit else -1.0
     norm = math.sqrt(sum(x * x for x in vec)) or 1.0
     return [x / norm for x in vec]
-
-
-def embed(text):
-    return _text_to_hash_vector(text)
 
 
 def cosine_similarity(v1, v2):
@@ -31,8 +57,13 @@ def goal_drift(anchor_text, current_text):
     v1 = embed(anchor_text)
     v2 = embed(current_text)
     sim = cosine_similarity(v1, v2)
-    return round(1.0 - sim, 4)
+    return round(max(0.0, min(1.0, 1.0 - sim)), 4)
 
 
 def anchor_drift(anchor_text, current_text):
     return goal_drift(anchor_text, current_text)
+
+
+def get_backend():
+    _get_model()
+    return "stub" if _use_stub else f"sentence-transformers:{_model_name}"
