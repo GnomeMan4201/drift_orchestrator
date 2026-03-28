@@ -104,7 +104,7 @@ Findings logged to SQLite:
 
 ## Roadmap
 
-- v0.2.0 — branch recovery: restore last green checkpoint, continue from stable state
+- ~~v0.2.0 — branch recovery~~ ✓ shipped
 - ~~v0.3.0 — sentence-transformers embeddings~~ ✓ shipped
-- v0.4.0 — multi-session comparison + drift delta reporting
-- v0.5.0 — live mode: stdin streaming eval with policy signals
+- ~~v0.4.0 — multi-session comparison + drift delta reporting~~ ✓ shipped
+- ~~v0.5.0 — live mode: stdin streaming eval with policy signals~~ ✓ shipped
