@@ -110,6 +110,8 @@ Findings logged to SQLite:
 - ~~v0.5.0 — live mode: stdin streaming eval with policy signals~~ ✓ shipped
 - ~~v0.6.0 — agent mode: drift_orchestrator wraps and monitors LLM calls~~ ✓ shipped
 
+- ~~v0.7.0 — prompt injection detection~~ ✓ shipped
+
 ## Files
 
 - ~~v0.2.0 — branch recovery~~ ✓ shipped
