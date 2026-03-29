@@ -10,10 +10,10 @@ from session_manager import create_session, append_turn, create_checkpoint
 from metrics import CompositeDensityScorer, sliding_token_windows, compute_repetition_score
 from embeddings import goal_drift, anchor_drift
 from policy import PolicyEngine
-from verifier import verify_imports, verify_signatures, verify_cli_flags, detect_hallucinations
+from verifier import verify_imports, verify_signatures, verify_cli_flags, detect_hallucinations, detect_prompt_injection
 from verifier.findings import (
     emit_import_findings, emit_signature_findings,
-    emit_cli_findings, emit_hallucination_findings, emit_policy_finding
+    emit_cli_findings, emit_hallucination_findings, emit_injection_findings, emit_policy_finding
 )
 from utils import load_jsonl, clamp, weighted_average, now_iso, uid
 
@@ -21,11 +21,12 @@ WINDOW_SIZE = 4
 STEP = 1
 
 ALPHA_WEIGHTS = {
-    "rho_density":      0.15,
-    "d_goal":           0.25,
-    "d_anchor":         0.20,
-    "risk_verify":      0.10,
-    "hallucination":    0.20,
+    "rho_density":      0.12,
+    "d_goal":           0.22,
+    "d_anchor":         0.18,
+    "risk_verify":      0.08,
+    "hallucination":    0.18,
+    "injection":        0.12,
     "repetition_score": 0.10,
 }
 
@@ -35,11 +36,12 @@ def _run_verifiers(text):
     sig = verify_signatures(text)
     cli = verify_cli_flags(text)
     hal = detect_hallucinations(text)
+    inj = detect_prompt_injection(text)
     verify_risk = round((imp["risk_score"] + sig["risk_score"] + cli["risk_score"]) / 3, 4)
-    return imp, sig, cli, hal, verify_risk
+    return imp, sig, cli, hal, inj, verify_risk
 
 
-def _collect_red_findings(imp, sig, cli, hal):
+def _collect_red_findings(imp, sig, cli, hal, inj=None):
     all_findings = []
     for mod, res in imp["imports"].items():
         if res["status"] == "missing":
@@ -50,6 +52,10 @@ def _collect_red_findings(imp, sig, cli, hal):
         status = cli["results"].get(flag, {}).get("status", "")
         if status == "invented":
             all_findings.append({"type": "invented_cli_flag", "severity": "HIGH"})
+    if inj:
+        for f in inj.get("findings", []):
+            if f["severity"] == "HIGH":
+                all_findings.append({"type": f["type"], "severity": "HIGH"})
     return all_findings
 
 
@@ -85,8 +91,8 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
         d_anch    = anchor_drift(anchor_text, window_text)
         rep_score = compute_repetition_score(texts)
 
-        imp, sig, cli, hal, verify_risk = _run_verifiers(window_text)
-        red_findings = _collect_red_findings(imp, sig, cli, hal)
+        imp, sig, cli, hal, inj, verify_risk = _run_verifiers(window_text)
+        red_findings = _collect_red_findings(imp, sig, cli, hal, inj)
 
         raw_alpha_inputs = [
             (1.0 - rho_density,      ALPHA_WEIGHTS["rho_density"]),
@@ -94,6 +100,7 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
             (d_anch,                  ALPHA_WEIGHTS["d_anchor"]),
             (verify_risk,             ALPHA_WEIGHTS["risk_verify"]),
             (hal["risk_score"],       ALPHA_WEIGHTS["hallucination"]),
+            (inj["risk_score"],       ALPHA_WEIGHTS["injection"]),
             (rep_score,               ALPHA_WEIGHTS["repetition_score"]),
         ]
         alpha = clamp(weighted_average(raw_alpha_inputs))
@@ -105,6 +112,8 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
             "risk_verify": verify_risk,
             "hallucination_risk": hal["risk_score"],
             "hallucination_count": float(hal["count"]),
+            "injection_risk": inj["risk_score"],
+            "injection_count": float(inj["count"]),
             "repetition_score": rep_score,
             **{f"density_{k}": v for k, v in breakdown.items()}
         }
@@ -149,6 +158,7 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
         emit_signature_findings(session_id, last_tid, sig)
         emit_cli_findings(session_id, last_tid, cli)
         emit_hallucination_findings(session_id, last_tid, hal)
+        emit_injection_findings(session_id, last_tid, inj)
         emit_policy_finding(session_id, last_tid, action, alpha, reason)
 
         if action == "CONTINUE" and alpha < 0.50:
