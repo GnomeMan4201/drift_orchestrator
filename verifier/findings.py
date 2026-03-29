@@ -60,6 +60,16 @@ def emit_hallucination_findings(session_id, turn_id, halluc_result):
         )
 
 
+def emit_injection_findings(session_id, turn_id, injection_result):
+    for f in injection_result.get("findings", []):
+        emit_finding(
+            session_id, turn_id,
+            finding_type=f["type"],
+            severity=f["severity"],
+            detail=f["detail"]
+        )
+
+
 def emit_policy_finding(session_id, turn_id, action, alpha, reason):
     severity_map = {"INJECT": "LOW", "REGENERATE": "MEDIUM", "ROLLBACK": "HIGH"}
     severity = severity_map.get(action, "INFO")
