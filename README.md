@@ -108,3 +108,11 @@ Findings logged to SQLite:
 - ~~v0.3.0 — sentence-transformers embeddings~~ ✓ shipped
 - ~~v0.4.0 — multi-session comparison + drift delta reporting~~ ✓ shipped
 - ~~v0.5.0 — live mode: stdin streaming eval with policy signals~~ ✓ shipped
+- ~~v0.6.0 — agent mode: drift_orchestrator wraps and monitors LLM calls~~ ✓ shipped
+
+## Files
+
+- ~~v0.2.0 — branch recovery~~ ✓ shipped
+- ~~v0.3.0 — sentence-transformers embeddings~~ ✓ shipped
+- ~~v0.4.0 — multi-session comparison + drift delta reporting~~ ✓ shipped
+- ~~v0.5.0 — live mode: stdin streaming eval with policy signals~~ ✓ shipped
