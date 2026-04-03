@@ -157,7 +157,8 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
 
         external_evaluator.evaluate_window(
             window_text, session_id, branch_id,
-            window_index, last_turn_index, alpha
+            window_index, last_turn_index, alpha,
+            anchor_text=anchor_text, goal_text=goal_text
         )
 
         emit_import_findings(session_id, last_tid, imp)

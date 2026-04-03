@@ -102,6 +102,8 @@ def init_db():
             turn_index INTEGER NOT NULL,
             alpha REAL,
             external_score REAL,
+            goal_alignment REAL,
+            anchor_alignment REAL,
             verdict TEXT,
             divergence REAL,
             raw_response TEXT,
