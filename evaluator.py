@@ -137,11 +137,26 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
             "created_at": now_iso()
         })
 
+        ext_result = external_evaluator.evaluate_window(
+            window_text, session_id, branch_id,
+            window_index, last_turn_index, alpha,
+            anchor_text=anchor_text, goal_text=goal_text
+        )
+        ext_divergence = abs(alpha - clamp(ext_result.get("drift_score", alpha))) if ext_result else None
+
+        embed_score = embedding_evaluator.evaluate_embedding(
+            window_text, anchor_text, goal_text,
+            session_id, branch_id,
+            window_index, last_turn_index, alpha
+        )
+
         action, level, reason, event = engine.evaluate(
             alpha, last_turn_index,
             session_id=session_id,
             branch_id=branch_id,
-            findings=red_findings
+            findings=red_findings,
+            divergence=ext_divergence,
+            embed_score=embed_score
         )
 
         insert_row("policy_events", {
@@ -155,18 +170,6 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
             "reason": reason,
             "created_at": event["created_at"]
         })
-
-        external_evaluator.evaluate_window(
-            window_text, session_id, branch_id,
-            window_index, last_turn_index, alpha,
-            anchor_text=anchor_text, goal_text=goal_text
-        )
-
-        embedding_evaluator.evaluate_embedding(
-            window_text, anchor_text, goal_text,
-            session_id, branch_id,
-            window_index, last_turn_index, alpha
-        )
 
         emit_import_findings(session_id, last_tid, imp)
         emit_signature_findings(session_id, last_tid, sig)

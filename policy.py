@@ -5,6 +5,9 @@ TAU_WARN_HIGH = 0.55
 TAU_WARN_LOW  = 0.45
 TAU_RB_HIGH   = 0.75
 TAU_RB_LOW    = 0.65
+TAU_DIV_WARN  = 0.35
+TAU_DIV_RB    = 0.50
+DIV_STREAK_RB = 4
 
 ACTION_CONTINUE   = "CONTINUE"
 ACTION_INJECT     = "INJECT"
@@ -18,8 +21,9 @@ class PolicyEngine:
     def __init__(self):
         self._state = ACTION_CONTINUE
         self._last_alpha = 0.0
+        self._div_streak = 0
 
-    def evaluate(self, alpha, turn_index, session_id=None, branch_id=None, findings=None):
+    def evaluate(self, alpha, turn_index, session_id=None, branch_id=None, findings=None, divergence=None, embed_score=None):
         prev = self._state
 
         has_red = any(
@@ -33,6 +37,21 @@ class PolicyEngine:
         else:
             action = self._decide(alpha, prev)
             reason = self._reason(alpha, prev, action)
+
+        if action != ACTION_ROLLBACK and divergence is not None:
+            if divergence >= TAU_DIV_WARN:
+                self._div_streak += 1
+            else:
+                self._div_streak = 0
+            if divergence >= TAU_DIV_RB:
+                action = ACTION_ROLLBACK
+                reason = "divergence override: div={:.4f} >= tau_div_rb={}".format(divergence, TAU_DIV_RB)
+            elif self._div_streak >= DIV_STREAK_RB:
+                action = ACTION_ROLLBACK
+                reason = "divergence override: streak={} >= {}".format(self._div_streak, DIV_STREAK_RB)
+            elif self._div_streak >= 2 and action == ACTION_CONTINUE:
+                action = ACTION_INJECT
+                reason = "divergence pressure: streak={}, div={:.4f}".format(self._div_streak, divergence)
 
         self._state = action
         self._last_alpha = alpha
