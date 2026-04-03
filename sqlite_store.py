@@ -110,6 +110,20 @@ def init_db():
             created_at TEXT NOT NULL,
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         );
+
+        CREATE TABLE IF NOT EXISTS embedding_eval (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            branch_id TEXT NOT NULL,
+            window_index INTEGER NOT NULL,
+            turn_index INTEGER NOT NULL,
+            alpha REAL,
+            anchor_dist REAL,
+            goal_dist REAL,
+            embed_score REAL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (session_id) REFERENCES sessions(id)
+        );
     """)
     conn.commit()
     conn.close()

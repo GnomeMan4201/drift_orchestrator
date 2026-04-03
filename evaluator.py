@@ -12,6 +12,7 @@ from embeddings import goal_drift, anchor_drift
 from policy import PolicyEngine
 from verifier import verify_imports, verify_signatures, verify_cli_flags, detect_hallucinations, detect_prompt_injection
 import external_evaluator
+import embedding_evaluator
 from verifier.findings import (
     emit_import_findings, emit_signature_findings,
     emit_cli_findings, emit_hallucination_findings, emit_injection_findings, emit_policy_finding
@@ -159,6 +160,12 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
             window_text, session_id, branch_id,
             window_index, last_turn_index, alpha,
             anchor_text=anchor_text, goal_text=goal_text
+        )
+
+        embedding_evaluator.evaluate_embedding(
+            window_text, anchor_text, goal_text,
+            session_id, branch_id,
+            window_index, last_turn_index, alpha
         )
 
         emit_import_findings(session_id, last_tid, imp)
