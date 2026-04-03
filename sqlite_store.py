@@ -93,6 +93,21 @@ def init_db():
             created_at TEXT NOT NULL,
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         );
+
+        CREATE TABLE IF NOT EXISTS external_eval (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            branch_id TEXT NOT NULL,
+            window_index INTEGER NOT NULL,
+            turn_index INTEGER NOT NULL,
+            alpha REAL,
+            external_score REAL,
+            verdict TEXT,
+            divergence REAL,
+            raw_response TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (session_id) REFERENCES sessions(id)
+        );
     """)
     conn.commit()
     conn.close()
