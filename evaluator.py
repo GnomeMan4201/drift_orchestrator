@@ -12,6 +12,8 @@ from embeddings import goal_drift, anchor_drift
 from policy import PolicyEngine
 from verifier import verify_imports, verify_signatures, verify_cli_flags, detect_hallucinations, detect_prompt_injection
 import external_evaluator
+import log_emitter
+import time
 import embedding_evaluator
 from verifier.findings import (
     emit_import_findings, emit_signature_findings,
@@ -61,7 +63,7 @@ def _collect_red_findings(imp, sig, cli, hal, inj=None):
     return all_findings
 
 
-def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _top_level=True):
+def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _top_level=True, emit_file=None, session_start_ms=None):
     if not turns:
         print("No turns to evaluate.")
         return
@@ -182,6 +184,23 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
             create_checkpoint(session_id, branch_id, last_turn_index, status="green")
             print(f"[CHECKPOINT] GREEN saved at turn {last_turn_index}")
 
+        if emit_file and session_start_ms:
+            ext_score = ext_result.get("drift_score") if ext_result else None
+            ext_verdict = ext_result.get("verdict", "UNKNOWN") if ext_result else "UNKNOWN"
+            log_emitter.emit_window_record(
+                session_id, window_index, last_turn_index,
+                alpha, ext_score, embed_score, ext_verdict,
+                action not in ("CONTINUE",), ext_score is not None and ext_score > 0.5,
+                action == "ROLLBACK", session_start_ms, emit_file
+            )
+            if action in ("ROLLBACK", "INJECT"):
+                trigger = "hybrid" if ext_divergence and ext_divergence >= 0.35 else "internal"
+                metric = "divergence" if ext_divergence and ext_divergence >= 0.35 else "alpha"
+                log_emitter.emit_event_record(
+                    session_id, window_index, action,
+                    trigger, metric, reason, emit_file
+                )
+
         if action == "ROLLBACK" and not rollback_occurred:
             rollback_occurred = True
             print(f"\n[ROLLBACK] Triggered at turn {last_turn_index} alpha={alpha:.4f}")
@@ -215,8 +234,14 @@ def evaluate_jsonl(path, report=True):
 
     session_id, branch_id = create_session(meta={"source": path})
     print(f"[SESSION] {session_id[:8]}... branch={branch_id[:8]}...")
+    _emit_path = path.replace(".jsonl", "_collab.jsonl")
+    _emit_file = open(_emit_path, "w")
+    log_emitter.emit_session_record(session_id, "claude", path, _emit_file)
+    _session_start_ms = int(time.time() * 1000)
 
-    evaluate_turns(session_id, branch_id, turns_data, start_index=0, report=report)
+    evaluate_turns(session_id, branch_id, turns_data, start_index=0, report=report, emit_file=_emit_file, session_start_ms=_session_start_ms)
+    _emit_file.close()
+    print(f'[EMITTER] Collab log written to {_emit_path}')
     return session_id, branch_id
 
 
