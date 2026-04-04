@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install minimal deps
+        run: pip install pyflakes
+      - name: Syntax check
+        run: |
+          python -m pyflakes *.py 2>&1 | grep -v "undefined name" || true
+          python -c "
+          import ast, pathlib, sys
+          errors = []
+          for f in pathlib.Path('.').glob('*.py'):
+              try:
+                  ast.parse(f.read_text())
+              except SyntaxError as e:
+                  errors.append(f'{f}: {e}')
+          if errors:
+              print('\n'.join(errors)); sys.exit(1)
+          print(f'All Python files parse cleanly')
+          "
