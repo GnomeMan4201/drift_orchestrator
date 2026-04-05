@@ -16,3 +16,6 @@ dist/
 build/
 .DS_Store
 data/embed_cache.db
+evasion_results.json
+*.bak
+dual_signal_comparison.png
