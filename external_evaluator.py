@@ -1,100 +1,41 @@
-import os
-import json
-import urllib.request
-import urllib.error
-from utils import uid, now_iso, clamp
+import json, os, httpx
 from sqlite_store import insert_row
+from utils import uid, now_iso, clamp
 
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-API_URL = "https://api.anthropic.com/v1/messages"
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://127.0.0.1:8765")
+GATEWAY_TIMEOUT = float(os.getenv("GATEWAY_TIMEOUT", "180"))
 
 SYSTEM_PROMPT = """You are an external coherence evaluator for LLM agent sessions.
-You will be given:
-- ANCHOR: the first turn that established the session goal
-- GOAL: the final intended output of the session
-- WINDOW: a sliding window of recent agent output
+Score coherence from 0.0 (failure) to 1.0 (coherent). High drift = incoherent output.
+Respond ONLY with valid JSON: {"coherence_score": float, "drift_score": float, "verdict": "STABLE"|"DEGRADED"|"FAILURE", "reason": "one sentence"}"""
 
-Your job is to evaluate whether the WINDOW has drifted from the ANCHOR and GOAL.
-A high drift score means the agent has lost coherence relative to where it started and where it should be going.
-
-Respond ONLY with valid JSON, no preamble, no markdown:
-{
-  "coherence_score": <float 0.0-1.0>,
-  "drift_score": <float 0.0-1.0>,
-  "goal_alignment": <float 0.0-1.0>,
-  "anchor_alignment": <float 0.0-1.0>,
-  "verdict": "STABLE" | "DEGRADED" | "FAILURE",
-  "reason": "<one sentence>"
-}"""
-
-
-def evaluate_window(window_text, session_id, branch_id, window_index, turn_index, alpha, anchor_text="", goal_text=""):
-    if not ANTHROPIC_API_KEY:
-        print("[EXTERNAL] No API key set - skipping external eval")
-        return None
-
-    payload = json.dumps({
-        "model": "claude-sonnet-4-20250514",
-        "max_tokens": 256,
-        "system": SYSTEM_PROMPT,
-        "messages": [
-            {"role": "user", "content": (
-                "ANCHOR:\n" + (anchor_text or "unknown") + "\n\n" +
-                "GOAL:\n" + (goal_text or "unknown") + "\n\n" +
-                "WINDOW:\n" + window_text
-            )}
-        ]
-    }).encode("utf-8")
-
-    req = urllib.request.Request(
-        API_URL,
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01"
-        },
-        method="POST"
-    )
-
+def evaluate_window(window_text, session_id, branch_id, window_index, turn_index, alpha, **kwargs):
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            raw = json.loads(resp.read().decode("utf-8"))
-            text = raw["content"][0]["text"].strip()
-            text = text.replace("```json", "").replace("```", "").strip()
-            result = json.loads(text)
-    except urllib.error.HTTPError as e:
-        print("[EXTERNAL] API error: {} {}".format(e.code, e.reason))
+        r = httpx.post(f"{GATEWAY_URL}/route", json={"prompt": "Analyze the semantic transition in this text. Does it maintain logical flow?\n\nTEXT:\n" + window_text[:500] + "\n\n[TASK] Output JSON with:\n1. coherence_score (0-1)\n2. drift_score (0-1)\n3. verdict (STABLE|DEGRADED|FAILURE)\n4. reason (max 12 words)\n\nFocus on sudden topic shifts. JSON:", "tier": "reasoning", "caller": "drift_orchestrator.external_evaluator", "stream": False, "options": {"num_predict": 512, "temperature": 0.1}}, timeout=GATEWAY_TIMEOUT)
+
+
+        r.raise_for_status()
+        text = r.json().get("response", "").strip()
+    except httpx.ConnectError:
+        print("[EXTERNAL] localai_gateway not reachable — skipping external eval")
         return None
     except Exception as e:
-        print("[EXTERNAL] Failed: {}".format(e))
+        print(f"[EXTERNAL] Failed: {e}")
         return None
-
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        try:
+            result = json.loads(text.replace("```json","").replace("```","").strip())
+        except:
+            print(f"[EXTERNAL] Could not parse: {text[:80]}")
+            return None
     external_score = clamp(result.get("drift_score", 0.5))
     verdict = result.get("verdict", "UNKNOWN")
     divergence = round(abs(alpha - external_score), 4)
-
-    insert_row("external_eval", {
-        "id": uid(),
-        "session_id": session_id,
-        "branch_id": branch_id,
-        "window_index": window_index,
-        "turn_index": turn_index,
-        "alpha": alpha,
-        "external_score": external_score,
-        "goal_alignment": clamp(result.get("goal_alignment", 0.5)),
-        "anchor_alignment": clamp(result.get("anchor_alignment", 0.5)),
-        "verdict": verdict,
-        "divergence": divergence,
-        "raw_response": json.dumps(result),
-        "created_at": now_iso()
-    })
-
-    print("[EXTERNAL] window={} alpha={:.4f} external={:.4f} divergence={:.4f} verdict={}".format(
-        window_index, alpha, external_score, divergence, verdict))
-
+    insert_row("external_eval", {"id": uid(), "session_id": session_id, "branch_id": branch_id, "window_index": window_index, "turn_index": turn_index, "alpha": alpha, "external_score": external_score, "verdict": verdict, "divergence": divergence, "raw_response": json.dumps(result), "created_at": now_iso()})
+    print("[EXTERNAL] window={} alpha={:.4f} external={:.4f} divergence={:.4f} verdict={}".format(window_index, alpha, external_score, divergence, verdict))
     if divergence >= 0.30:
         print("[DIVERGENCE WARNING] Internal and external signals disagree significantly")
         print("[DIVERGENCE] Reason: {}".format(result.get("reason", "unknown")))
-
     return result
