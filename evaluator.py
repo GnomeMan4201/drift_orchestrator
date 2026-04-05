@@ -158,7 +158,8 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
             branch_id=branch_id,
             findings=red_findings,
             divergence=ext_divergence,
-            embed_score=embed_score
+            embed_score=embed_score,
+            d_anchor=d_anch
         )
 
         insert_row("policy_events", {

@@ -8,6 +8,7 @@ TAU_RB_LOW    = 0.65
 TAU_DIV_WARN  = 0.40
 TAU_DIV_RB    = 0.60
 DIV_STREAK_RB = 5
+TAU_MONOTONIC_WINDOWS = 4
 
 ACTION_CONTINUE   = "CONTINUE"
 ACTION_INJECT     = "INJECT"
@@ -22,8 +23,9 @@ class PolicyEngine:
         self._state = ACTION_CONTINUE
         self._last_alpha = 0.0
         self._div_streak = 0
+        self._anchor_history = []
 
-    def evaluate(self, alpha, turn_index, session_id=None, branch_id=None, findings=None, divergence=None, embed_score=None):
+    def evaluate(self, alpha, turn_index, session_id=None, branch_id=None, findings=None, divergence=None, embed_score=None, d_anchor=None):
         prev = self._state
 
         has_red = any(
@@ -52,6 +54,17 @@ class PolicyEngine:
             elif self._div_streak >= 2 and action == ACTION_CONTINUE:
                 action = ACTION_INJECT
                 reason = "divergence pressure: streak={}, div={:.4f}".format(self._div_streak, divergence)
+
+        if action != ACTION_ROLLBACK and d_anchor is not None:
+            self._anchor_history.append(d_anchor)
+            if len(self._anchor_history) >= TAU_MONOTONIC_WINDOWS:
+                w = self._anchor_history[-TAU_MONOTONIC_WINDOWS:]
+                if all(w[i] <= w[i+1] for i in range(len(w)-1)):
+                    action = ACTION_ROLLBACK
+                    reason = "monotonic anchor drift: d_anchor increased {} consecutive windows ({})".format(
+                        TAU_MONOTONIC_WINDOWS,
+                        ", ".join("{:.4f}".format(x) for x in w)
+                    )
 
         self._state = action
         self._last_alpha = alpha
@@ -98,3 +111,4 @@ class PolicyEngine:
     def reset(self):
         self._state = ACTION_CONTINUE
         self._last_alpha = 0.0
+        self._anchor_history = []
