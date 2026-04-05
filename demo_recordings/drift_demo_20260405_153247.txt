@@ -1,0 +1,220 @@
+Requirement already satisfied: sentence-transformers<4.0.0,>=2.2.0 in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 1)) (3.4.1)
+Requirement already satisfied: fastapi>=0.110.0 in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 2)) (0.135.3)
+Requirement already satisfied: uvicorn>=0.29.0 in ./.venv/lib/python3.12/site-packages (from uvicorn[standard]>=0.29.0->-r requirements.txt (line 3)) (0.43.0)
+Requirement already satisfied: httpx>=0.27.0 in ./.venv/lib/python3.12/site-packages (from -r requirements.txt (line 4)) (0.28.1)
+Requirement already satisfied: transformers<5.0.0,>=4.41.0 in ./.venv/lib/python3.12/site-packages (from sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (4.57.6)
+Requirement already satisfied: tqdm in ./.venv/lib/python3.12/site-packages (from sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (4.67.3)
+Requirement already satisfied: torch>=1.11.0 in ./.venv/lib/python3.12/site-packages (from sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (2.11.0)
+Requirement already satisfied: scikit-learn in ./.venv/lib/python3.12/site-packages (from sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (1.8.0)
+Requirement already satisfied: scipy in ./.venv/lib/python3.12/site-packages (from sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (1.17.1)
+Requirement already satisfied: huggingface-hub>=0.20.0 in ./.venv/lib/python3.12/site-packages (from sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (0.36.2)
+Requirement already satisfied: Pillow in ./.venv/lib/python3.12/site-packages (from sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (12.2.0)
+Requirement already satisfied: filelock in ./.venv/lib/python3.12/site-packages (from transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (3.25.2)
+Requirement already satisfied: numpy>=1.17 in ./.venv/lib/python3.12/site-packages (from transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (2.4.4)
+Requirement already satisfied: packaging>=20.0 in ./.venv/lib/python3.12/site-packages (from transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (26.0)
+Requirement already satisfied: pyyaml>=5.1 in ./.venv/lib/python3.12/site-packages (from transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (6.0.3)
+Requirement already satisfied: regex!=2019.12.17 in ./.venv/lib/python3.12/site-packages (from transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (2026.4.4)
+Requirement already satisfied: requests in ./.venv/lib/python3.12/site-packages (from transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (2.33.1)
+Requirement already satisfied: tokenizers<=0.23.0,>=0.22.0 in ./.venv/lib/python3.12/site-packages (from transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (0.22.2)
+Requirement already satisfied: safetensors>=0.4.3 in ./.venv/lib/python3.12/site-packages (from transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (0.7.0)
+Requirement already satisfied: fsspec>=2023.5.0 in ./.venv/lib/python3.12/site-packages (from huggingface-hub>=0.20.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (2026.3.0)
+Requirement already satisfied: hf-xet<2.0.0,>=1.1.3 in ./.venv/lib/python3.12/site-packages (from huggingface-hub>=0.20.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (1.4.3)
+Requirement already satisfied: typing-extensions>=3.7.4.3 in ./.venv/lib/python3.12/site-packages (from huggingface-hub>=0.20.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (4.15.0)
+Requirement already satisfied: starlette>=0.46.0 in ./.venv/lib/python3.12/site-packages (from fastapi>=0.110.0->-r requirements.txt (line 2)) (1.0.0)
+Requirement already satisfied: pydantic>=2.9.0 in ./.venv/lib/python3.12/site-packages (from fastapi>=0.110.0->-r requirements.txt (line 2)) (2.12.5)
+Requirement already satisfied: typing-inspection>=0.4.2 in ./.venv/lib/python3.12/site-packages (from fastapi>=0.110.0->-r requirements.txt (line 2)) (0.4.2)
+Requirement already satisfied: annotated-doc>=0.0.2 in ./.venv/lib/python3.12/site-packages (from fastapi>=0.110.0->-r requirements.txt (line 2)) (0.0.4)
+Requirement already satisfied: click>=7.0 in ./.venv/lib/python3.12/site-packages (from uvicorn>=0.29.0->uvicorn[standard]>=0.29.0->-r requirements.txt (line 3)) (8.3.2)
+Requirement already satisfied: h11>=0.8 in ./.venv/lib/python3.12/site-packages (from uvicorn>=0.29.0->uvicorn[standard]>=0.29.0->-r requirements.txt (line 3)) (0.16.0)
+Requirement already satisfied: anyio in ./.venv/lib/python3.12/site-packages (from httpx>=0.27.0->-r requirements.txt (line 4)) (4.13.0)
+Requirement already satisfied: certifi in ./.venv/lib/python3.12/site-packages (from httpx>=0.27.0->-r requirements.txt (line 4)) (2026.2.25)
+Requirement already satisfied: httpcore==1.* in ./.venv/lib/python3.12/site-packages (from httpx>=0.27.0->-r requirements.txt (line 4)) (1.0.9)
+Requirement already satisfied: idna in ./.venv/lib/python3.12/site-packages (from httpx>=0.27.0->-r requirements.txt (line 4)) (3.11)
+Requirement already satisfied: annotated-types>=0.6.0 in ./.venv/lib/python3.12/site-packages (from pydantic>=2.9.0->fastapi>=0.110.0->-r requirements.txt (line 2)) (0.7.0)
+Requirement already satisfied: pydantic-core==2.41.5 in ./.venv/lib/python3.12/site-packages (from pydantic>=2.9.0->fastapi>=0.110.0->-r requirements.txt (line 2)) (2.41.5)
+Requirement already satisfied: setuptools<82 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (81.0.0)
+Requirement already satisfied: sympy>=1.13.3 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (3.6.1)
+Requirement already satisfied: jinja2 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (3.1.6)
+Requirement already satisfied: cuda-toolkit==13.0.2 in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (13.0.2)
+Requirement already satisfied: cuda-bindings<14,>=13.0.3 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (13.2.0)
+Requirement already satisfied: nvidia-cudnn-cu13==9.19.0.56 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (9.19.0.56)
+Requirement already satisfied: nvidia-cusparselt-cu13==0.8.0 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (0.8.0)
+Requirement already satisfied: nvidia-nccl-cu13==2.28.9 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (2.28.9)
+Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (3.4.5)
+Requirement already satisfied: triton==3.6.0 in ./.venv/lib/python3.12/site-packages (from torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (3.6.0)
+Requirement already satisfied: nvidia-cublas==13.1.0.3.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (13.1.0.3)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (13.0.96)
+Requirement already satisfied: nvidia-cufft==12.0.0.61.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (12.0.0.61)
+Requirement already satisfied: nvidia-cufile==1.15.1.6.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (1.15.1.6)
+Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (13.0.85)
+Requirement already satisfied: nvidia-curand==10.4.0.35.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (10.4.0.35)
+Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (12.0.4.66)
+Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (12.6.3.3)
+Requirement already satisfied: nvidia-nvjitlink==13.0.88.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (13.0.88)
+Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (13.0.88)
+Requirement already satisfied: nvidia-nvtx==13.0.85.* in ./.venv/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.2; platform_system == "Linux"->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (13.0.85)
+Requirement already satisfied: cuda-pathfinder~=1.1 in ./.venv/lib/python3.12/site-packages (from cuda-bindings<14,>=13.0.3->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (1.5.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in ./.venv/lib/python3.12/site-packages (from sympy>=1.13.3->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (1.3.0)
+Requirement already satisfied: httptools>=0.6.3 in ./.venv/lib/python3.12/site-packages (from uvicorn[standard]>=0.29.0->-r requirements.txt (line 3)) (0.7.1)
+Requirement already satisfied: python-dotenv>=0.13 in ./.venv/lib/python3.12/site-packages (from uvicorn[standard]>=0.29.0->-r requirements.txt (line 3)) (1.2.2)
+Requirement already satisfied: uvloop>=0.15.1 in ./.venv/lib/python3.12/site-packages (from uvicorn[standard]>=0.29.0->-r requirements.txt (line 3)) (0.22.1)
+Requirement already satisfied: watchfiles>=0.20 in ./.venv/lib/python3.12/site-packages (from uvicorn[standard]>=0.29.0->-r requirements.txt (line 3)) (1.1.1)
+Requirement already satisfied: websockets>=10.4 in ./.venv/lib/python3.12/site-packages (from uvicorn[standard]>=0.29.0->-r requirements.txt (line 3)) (16.0)
+Requirement already satisfied: MarkupSafe>=2.0 in ./.venv/lib/python3.12/site-packages (from jinja2->torch>=1.11.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (3.0.3)
+Requirement already satisfied: charset_normalizer<4,>=2 in ./.venv/lib/python3.12/site-packages (from requests->transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (3.4.7)
+Requirement already satisfied: urllib3<3,>=1.26 in ./.venv/lib/python3.12/site-packages (from requests->transformers<5.0.0,>=4.41.0->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (2.6.3)
+Requirement already satisfied: joblib>=1.3.0 in ./.venv/lib/python3.12/site-packages (from scikit-learn->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (1.5.3)
+Requirement already satisfied: threadpoolctl>=3.2.0 in ./.venv/lib/python3.12/site-packages (from scikit-learn->sentence-transformers<4.0.0,>=2.2.0->-r requirements.txt (line 1)) (3.6.0)
+using command: /home/bad_banana/research_hub/repos/drift_orchestrator/.venv/bin/python3 evaluator.py examples/high_drift.jsonl
+
+[SESSION START]
+
+[TURN 3]
+alpha      = 0.36 [#######-------------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 4]
+alpha      = 0.40 [########------------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 5]
+alpha      = 0.40 [########------------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 6]
+alpha      = 0.39 [########------------]
+divergence = 0.00 [--------------------]
+status     = ROLLBACK
+action     = ROLLBACK TRIGGERED
+
+[ROLLBACK]
+raw        = [ROLLBACK] Triggered at turn 6 alpha=0.3903
+
+[ROLLBACK]
+raw        = [ROLLBACK] Reason: monotonic anchor drift: d_anchor increased 4 consecutive windows (0.7110, 1.0000, 1.0000, 1.0000)
+
+[RECOVERY]
+raw        = [RECOVERY] Last green checkpoint: turn_index=5
+
+[RECOVERY]
+raw        = [RECOVERY] Restoring branch from checkpoint 01643bb1...
+
+[RECOVERY]
+raw        = [RECOVERY] New branch: 9d24cbff...
+
+[RECOVERY]
+raw        = [RECOVERY] Restored to turn 5, dropped 14 turns
+
+[RECOVERY]
+raw        = [RECOVERY] Continuing evaluation from turn 6...
+
+[TURN 9]
+alpha      = 0.43 [#########-----------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 10]
+alpha      = 0.42 [########------------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 11]
+alpha      = 0.45 [#########-----------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 12]
+alpha      = 0.46 [#########-----------]
+divergence = 0.00 [--------------------]
+status     = ROLLBACK
+action     = ROLLBACK TRIGGERED
+
+[ROLLBACK]
+raw        = [ROLLBACK] Triggered at turn 12 alpha=0.4570
+
+[ROLLBACK]
+raw        = [ROLLBACK] Reason: monotonic anchor drift: d_anchor increased 4 consecutive windows (1.0000, 1.0000, 1.0000, 1.0000)
+
+[RECOVERY]
+raw        = [RECOVERY] Last green checkpoint: turn_index=11
+
+[RECOVERY]
+raw        = [RECOVERY] Restoring branch from checkpoint ebd1f31b...
+
+[RECOVERY]
+raw        = [RECOVERY] New branch: 96ff4b65...
+
+[RECOVERY]
+raw        = [RECOVERY] Restored to turn 11, dropped 8 turns
+
+[RECOVERY]
+raw        = [RECOVERY] Continuing evaluation from turn 12...
+
+[TURN 15]
+alpha      = 0.50 [##########----------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 16]
+alpha      = 0.50 [##########----------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 17]
+alpha      = 0.47 [#########-----------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 18]
+alpha      = 0.45 [#########-----------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[TURN 19]
+alpha      = 0.37 [#######-------------]
+divergence = 0.00 [--------------------]
+status     = ROLLBACK
+action     = ROLLBACK TRIGGERED
+
+[ROLLBACK]
+raw        = [ROLLBACK] Triggered at turn 19 alpha=0.3726
+
+[ROLLBACK]
+raw        = [ROLLBACK] Reason: monotonic anchor drift: d_anchor increased 4 consecutive windows (0.9979, 1.0000, 1.0000, 1.0000)
+
+[RECOVERY]
+raw        = [RECOVERY] Last green checkpoint: turn_index=18
+
+[RECOVERY]
+raw        = [RECOVERY] Restoring branch from checkpoint bc160c1e...
+
+[RECOVERY]
+raw        = [RECOVERY] New branch: 9be9d01f...
+
+[RECOVERY]
+raw        = [RECOVERY] Restored to turn 18, dropped 1 turns
+
+[RECOVERY]
+raw        = [RECOVERY] Continuing evaluation from turn 19...
+
+[TURN 19]
+alpha      = 0.08 [##------------------]
+divergence = 0.00 [--------------------]
+status     = STABLE
+action     = continuing
+
+[SESSION COMPLETE]
