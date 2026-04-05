@@ -15,6 +15,8 @@ from verifier.findings import (
     emit_hallucination_findings, emit_injection_findings, emit_policy_finding
 )
 from utils import now_iso, uid, clamp, weighted_average
+from drift_live_signal import LiveSignalStream
+from live_evaluator import LiveEvaluator
 
 ALPHA_WEIGHTS = {
     "rho_density":      0.12,
@@ -89,6 +91,17 @@ class AgentRuntime:
         self.inject_count = 0
         self.regenerate_count = 0
         self.discarded_responses = []
+
+        # Live telemetry
+        self.telemetry = LiveSignalStream(session_id=self.session_id, queue_maxsize=128)
+        self._evaluator = LiveEvaluator()
+
+        # Register with API if it's loaded in the same process
+        try:
+            from live_signal_api import register_stream
+            register_stream(self.telemetry)
+        except ImportError:
+            pass  # API not loaded — standalone mode, telemetry still works
 
         if verbose:
             print(f"\n{_c('═' * 68, 'CYAN')}")
@@ -199,7 +212,33 @@ class AgentRuntime:
         if action == "CONTINUE" and alpha < 0.50:
             create_checkpoint(self.session_id, self.branch_id, turn_index, status="green")
 
+        # Push to live telemetry stream (non-blocking fire-and-forget)
+        self._push_telemetry(alpha, window_text)
+
         return alpha, action, level, reason, raw_scores, red_findings
+
+    def _push_telemetry(self, alpha: float, window_text: str) -> None:
+        """
+        Fire-and-forget: push alpha + embedding external score into the
+        live telemetry stream. Runs the embedding call in a thread so it
+        never blocks the main turn loop.
+        """
+        import threading
+
+        def _run():
+            import asyncio
+            external = self._evaluator._score_sync(window_text)
+            # Use a fresh event loop in the thread — agent_runtime is sync
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(
+                    self.telemetry.update_scores(alpha, external)
+                )
+            finally:
+                loop.close()
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
 
     def _print_turn_signal(self, turn_index, alpha, action, level, scores):
         status = _alpha_status(alpha)
@@ -288,6 +327,7 @@ class AgentRuntime:
     def send(self, user_message):
         if not self.anchor_text:
             self.anchor_text = user_message
+            self._evaluator.set_anchor(user_message)
 
         self.history.append({"role": "user", "content": user_message})
         tid, _ = append_turn(self.session_id, self.branch_id, "user", user_message)
@@ -310,6 +350,7 @@ class AgentRuntime:
             return None
 
         self.goal_text = response
+        self._evaluator.set_goal(response)
         self.history.append({"role": "assistant", "content": response})
         tid, _ = append_turn(self.session_id, self.branch_id, "assistant", response)
         self.turn_ids.append(tid)

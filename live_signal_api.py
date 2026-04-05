@@ -3,13 +3,22 @@ live_signal_api.py
 ==================
 FastAPI SSE endpoint wrapping LiveSignalStream.
 
-Run:
-    uvicorn live_signal_api:app --reload
+Supports a session registry so AgentRuntime can register its own stream
+and the dashboard subscribes to a real session's live telemetry.
 
-POST /score          — push alpha + external scores
-GET  /stream         — SSE stream of SignalSnapshot events
-GET  /snapshot       — latest snapshot (polling fallback)
-GET  /health         — liveness check
+Endpoints
+---------
+GET  /health                  — liveness, registry stats
+GET  /sessions                — list active session IDs
+GET  /stream                  — SSE from default session
+GET  /stream/{session_id}     — SSE from a specific session
+GET  /snapshot                — latest snapshot, default session
+GET  /snapshot/{session_id}   — latest snapshot, specific session
+POST /score                   — push scores to a session (or default)
+POST /register/{session_id}   — create/touch a session stream entry
+
+Run:
+    uvicorn live_signal_api:app --port 8765 --reload
 """
 
 from __future__ import annotations
@@ -17,9 +26,9 @@ from __future__ import annotations
 import json
 import asyncio
 import logging
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Dict, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -28,13 +37,38 @@ from drift_live_signal import LiveSignalStream, SignalSnapshot
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# App + shared stream instance
+# App + stream registry
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="drift_orchestrator live signal API", version="1.0.0")
+app = FastAPI(title="drift_orchestrator live signal API", version="2.0.0")
 
-# A single shared stream; replace with a session-keyed map for multi-session.
-_stream = LiveSignalStream(session_id="default", queue_maxsize=128)
+# session_id -> LiveSignalStream
+_registry: Dict[str, LiveSignalStream] = {}
+_DEFAULT = "default"
+
+
+def _get_stream(session_id: str = _DEFAULT) -> LiveSignalStream:
+    """Return existing stream or create one for this session."""
+    if session_id not in _registry:
+        _registry[session_id] = LiveSignalStream(
+            session_id=session_id, queue_maxsize=128
+        )
+    return _registry[session_id]
+
+
+def register_stream(stream: LiveSignalStream) -> None:
+    """
+    Called by AgentRuntime (or any producer) to register its own
+    LiveSignalStream instance so the API exposes it directly.
+
+        from live_signal_api import register_stream
+        register_stream(self.telemetry)
+    """
+    _registry[stream._session_id] = stream
+
+
+# Ensure default stream exists at startup
+_get_stream(_DEFAULT)
 
 
 # ---------------------------------------------------------------------------
@@ -42,8 +76,8 @@ _stream = LiveSignalStream(session_id="default", queue_maxsize=128)
 # ---------------------------------------------------------------------------
 
 class ScoreUpdate(BaseModel):
-    alpha: float = Field(..., ge=0.0, le=1.0, description="Internal drift score 0-1")
-    external: float = Field(..., ge=0.0, le=1.0, description="External evaluator score 0-1")
+    alpha: float = Field(..., ge=0.0, le=1.0)
+    external: float = Field(..., ge=0.0, le=1.0)
     session_id: Optional[str] = None
 
 
@@ -55,14 +89,45 @@ class ScoreUpdate(BaseModel):
 async def health() -> dict:
     return {
         "status": "ok",
-        "subscribers": _stream.subscriber_count,
-        "seq": _stream.seq,
+        "sessions": list(_registry.keys()),
+        "total_subscribers": sum(s.subscriber_count for s in _registry.values()),
     }
 
 
+@app.get("/sessions")
+async def sessions() -> dict:
+    return {
+        sid: {
+            "seq": s.seq,
+            "subscribers": s.subscriber_count,
+            "has_data": s.last_snapshot is not None,
+        }
+        for sid, s in _registry.items()
+    }
+
+
+@app.post("/register/{session_id}")
+async def register(session_id: str) -> JSONResponse:
+    """Explicitly create/touch a session stream entry."""
+    _get_stream(session_id)
+    return JSONResponse({"registered": session_id})
+
+
 @app.get("/snapshot")
-async def snapshot() -> JSONResponse:
-    snap = _stream.last_snapshot
+async def snapshot_default() -> JSONResponse:
+    return _snapshot_response(_DEFAULT)
+
+
+@app.get("/snapshot/{session_id}")
+async def snapshot_session(session_id: str) -> JSONResponse:
+    return _snapshot_response(session_id)
+
+
+def _snapshot_response(session_id: str) -> JSONResponse:
+    stream = _registry.get(session_id)
+    if stream is None:
+        raise HTTPException(status_code=404, detail=f"session {session_id!r} not found")
+    snap = stream.last_snapshot
     if snap is None:
         return JSONResponse({"error": "no snapshot yet"}, status_code=204)
     return JSONResponse(snap.as_dict())
@@ -70,23 +135,29 @@ async def snapshot() -> JSONResponse:
 
 @app.post("/score")
 async def push_score(update: ScoreUpdate) -> JSONResponse:
-    snap = await _stream.update_scores(update.alpha, update.external)
+    sid = update.session_id or _DEFAULT
+    stream = _get_stream(sid)
+    snap = await stream.update_scores(update.alpha, update.external)
     if snap is None:
         return JSONResponse({"status": "no_change"})
     return JSONResponse({"status": "emitted", "seq": snap.seq, "snapshot": snap.as_dict()})
 
 
 @app.get("/stream")
-async def sse_stream(request: Request) -> StreamingResponse:
-    """
-    SSE endpoint. Each event is framed as:
-        data: <json>\n\n
+async def sse_stream_default(request: Request) -> StreamingResponse:
+    return _sse_response(request, _DEFAULT)
 
-    Sends an initial snapshot immediately if one exists, then streams
-    subsequent deltas. Cleans up subscription on client disconnect.
-    """
+
+@app.get("/stream/{session_id}")
+async def sse_stream_session(session_id: str, request: Request) -> StreamingResponse:
+    if session_id not in _registry:
+        _get_stream(session_id)
+    return _sse_response(request, session_id)
+
+
+def _sse_response(request: Request, session_id: str) -> StreamingResponse:
     return StreamingResponse(
-        _sse_generator(request),
+        _sse_generator(request, session_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -96,13 +167,9 @@ async def sse_stream(request: Request) -> StreamingResponse:
     )
 
 
-async def _sse_generator(request: Request) -> AsyncIterator[str]:
-    """
-    Async generator for SSE frames.
-    Subscribes to the shared stream, yields JSON frames,
-    and cleans up on client disconnect or generator exit.
-    """
-    q = await _stream.subscribe()
+async def _sse_generator(request: Request, session_id: str) -> AsyncIterator[str]:
+    stream = _get_stream(session_id)
+    q = await stream.subscribe()
     try:
         while True:
             if await request.is_disconnected():
@@ -112,12 +179,11 @@ async def _sse_generator(request: Request) -> AsyncIterator[str]:
                 payload = json.dumps(snapshot.as_dict())
                 yield f"data: {payload}\n\n"
             except asyncio.TimeoutError:
-                # keepalive comment
                 yield ": keepalive\n\n"
     except asyncio.CancelledError:
         pass
     finally:
-        await _stream.unsubscribe(q)
+        await stream.unsubscribe(q)
 
 
 # ---------------------------------------------------------------------------
