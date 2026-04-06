@@ -1,0 +1,7 @@
+{
+  "host_risk": 0.92,
+  "network_restrictiveness": 0.85,
+  "tool_trust": 0.25,
+  "anomaly_level": 0.80,
+  "local_only": true
+}

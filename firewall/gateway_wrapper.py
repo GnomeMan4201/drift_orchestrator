@@ -9,6 +9,7 @@ from firewall.control_plane import (
 )
 from firewall.checkpoint_store import save_checkpoint, get_last_good_response
 from analysis.trace_logger import log_event
+from firewall.sensation import collect_state, derive_posture, inject_context
 
 GATEWAY = "http://127.0.0.1:8765"
 TIMEOUT_SECONDS = 60.0
@@ -24,6 +25,13 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
     if is_exact_request(original_prompt):
         expected_exact = original_prompt.split(":", 1)[1].strip()
 
+    state = collect_state()
+    posture = derive_posture(state)
+
+    effective_drift = max(float(drift_score or 0.0), float(state.anomaly_level or 0.0) * 0.25)
+    if not expected_exact:
+        prompt = inject_context(prompt, posture, state)
+
     if prompt.startswith("[BLOCKED"):
         last_good = get_last_good_response(agent) if use_rollback else None
         response = last_good or prompt
@@ -33,7 +41,7 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
             "agent": agent,
             "prompt": original_prompt,
             "inj_score": inj_score,
-            "drift_score": drift_score,
+            "drift_score": effective_drift,
             "blocked": True,
             "reason": reason,
             "output": response,
@@ -42,12 +50,12 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
         return {
             "response": response,
             "inj_score": inj_score,
-            "drift_score": drift_score,
+            "drift_score": effective_drift,
             "blocked": True,
             "reason": reason,
         }
 
-    decision = score_request(prompt, drift_score=drift_score)
+    decision = score_request(prompt, drift_score=max(effective_drift, posture.max_drift + (effective_drift - posture.max_drift) if effective_drift > posture.max_drift else effective_drift))
     if decision["blocked"]:
         last_good = get_last_good_response(agent) if use_rollback else None
         response = last_good or "[BLOCKED: control-plane anomaly detected]"
@@ -92,7 +100,7 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
             "agent": agent,
             "prompt": original_prompt,
             "inj_score": inj_score,
-            "drift_score": drift_score,
+            "drift_score": effective_drift,
             "blocked": True,
             "reason": reason,
             "output": response,
@@ -101,18 +109,18 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
         return {
             "response": response,
             "inj_score": inj_score,
-            "drift_score": drift_score,
+            "drift_score": effective_drift,
             "blocked": True,
             "reason": reason,
         }
 
-    save_checkpoint(agent, original_prompt, out, inj_score, drift_score)
+    save_checkpoint(agent, original_prompt, out, inj_score, effective_drift)
 
     log_event({
         "agent": agent,
         "prompt": original_prompt,
         "inj_score": inj_score,
-        "drift_score": drift_score,
+        "drift_score": effective_drift,
         "blocked": False,
         "reason": None,
         "output": out,
@@ -121,7 +129,7 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
     return {
         "response": out,
         "inj_score": inj_score,
-        "drift_score": drift_score,
+        "drift_score": effective_drift,
         "blocked": False,
         "reason": None,
     }
