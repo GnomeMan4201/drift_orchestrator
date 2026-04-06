@@ -29,8 +29,6 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
     posture = derive_posture(state)
 
     effective_drift = max(float(drift_score or 0.0), float(state.anomaly_level or 0.0) * 0.25)
-    if not expected_exact:
-        prompt = inject_context(prompt, posture, state)
 
     if prompt.startswith("[BLOCKED"):
         last_good = get_last_good_response(agent) if use_rollback else None
@@ -45,6 +43,8 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
             "blocked": True,
             "reason": reason,
             "output": response,
+            "posture": posture.to_dict(),
+            "state_vector": state.to_dict(),
         })
 
         return {
@@ -55,26 +55,59 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
             "reason": reason,
         }
 
-    decision = score_request(prompt, drift_score=max(effective_drift, posture.max_drift + (effective_drift - posture.max_drift) if effective_drift > posture.max_drift else effective_drift))
-    if decision["blocked"]:
+    if posture.name == "LOCKDOWN":
+        last_good = get_last_good_response(agent) if use_rollback else None
+        response = last_good or "[LOCKDOWN BLOCK]"
+        reason = "lockdown_policy"
+
+        log_event({
+            "agent": agent,
+            "prompt": original_prompt,
+            "inj_score": inj_score,
+            "drift_score": effective_drift,
+            "blocked": True,
+            "reason": reason,
+            "output": response,
+            "posture": posture.to_dict(),
+            "state_vector": state.to_dict(),
+        })
+
+        return {
+            "response": response,
+            "inj_score": inj_score,
+            "drift_score": effective_drift,
+            "blocked": True,
+            "reason": reason,
+        }
+
+    if not expected_exact:
+        prompt = inject_context(prompt, posture, state)
+
+    decision = score_request(prompt, drift_score=effective_drift)
+    if decision["blocked"] or effective_drift > posture.max_drift:
         last_good = get_last_good_response(agent) if use_rollback else None
         response = last_good or "[BLOCKED: control-plane anomaly detected]"
-        reason = f'{decision["reason"]}_rollback' if last_good else decision["reason"]
+        if effective_drift > posture.max_drift:
+            reason = "posture_drift_rollback" if last_good else "posture_drift"
+        else:
+            reason = f'{decision["reason"]}_rollback' if last_good else decision["reason"]
 
         log_event({
             "agent": agent,
             "prompt": original_prompt,
             "inj_score": float(decision["inj_score"]),
-            "drift_score": float(decision["drift_score"]),
+            "drift_score": effective_drift,
             "blocked": True,
             "reason": reason,
             "output": response,
+            "posture": posture.to_dict(),
+            "state_vector": state.to_dict(),
         })
 
         return {
             "response": response,
             "inj_score": float(decision["inj_score"]),
-            "drift_score": float(decision["drift_score"]),
+            "drift_score": effective_drift,
             "blocked": True,
             "reason": reason,
         }
@@ -104,6 +137,8 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
             "blocked": True,
             "reason": reason,
             "output": response,
+            "posture": posture.to_dict(),
+            "state_vector": state.to_dict(),
         })
 
         return {
@@ -124,6 +159,8 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
         "blocked": False,
         "reason": None,
         "output": out,
+        "posture": posture.to_dict(),
+        "state_vector": state.to_dict(),
     })
 
     return {
