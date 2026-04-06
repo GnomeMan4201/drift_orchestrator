@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import math
 from pathlib import Path
 import networkx as nx
 
@@ -9,61 +8,45 @@ OUT = Path("results/trace_graph.gexf")
 
 G = nx.DiGraph()
 
-def add_node(name, **attrs):
-    if name not in G:
-        G.add_node(name, **attrs)
+def color(blocked, reason):
+    if blocked and "drift" in reason:
+        return "orange"
+    if blocked and "http_error" in reason:
+        return "red"
+    if blocked:
+        return "darkred"
+    return "green"
 
-def add_edge(a, b, **attrs):
-    G.add_edge(a, b, **attrs)
-
-if not INPUT.exists():
-    raise SystemExit("trace_log.jsonl not found")
-
-with INPUT.open(encoding="utf-8") as f:
+with INPUT.open() as f:
     for i, line in enumerate(f):
-        line = line.strip()
-        if not line:
-            continue
         e = json.loads(line)
 
-        agent = e.get("agent", "unknown")
-        prompt = str(e.get("prompt", ""))[:120]
-        inj = float(e.get("inj_score", 0.0) or 0.0)
-        drift = float(e.get("drift_score", 0.0) or 0.0)
-        blocked = bool(e.get("blocked", False))
-        reason = str(e.get("reason", "") or "")
-        output = str(e.get("output", "") or "")[:120]
+        agent = e["agent"]
+        prompt = e["prompt"][:60]
+        blocked = e["blocked"]
+        reason = str(e.get("reason") or "")
+        drift = float(e.get("drift_score", 0.0))
+        inj = float(e.get("inj_score", 0.0))
 
-        vec = e.get("embedding") or e.get("vector") or None
-        norm = None
-        if isinstance(vec, list) and vec:
-            try:
-                norm = math.sqrt(sum(float(v) * float(v) for v in vec))
-            except Exception:
-                norm = None
+        a = f"agent:{agent}"
+        p = f"prompt:{i}"
+        s = f"state:{i}"
 
-        node_agent = f"agent:{agent}"
-        node_prompt = f"prompt:{i}"
-        node_state = f"state:{i}"
-
-        add_node(node_agent, node_type="agent", label=agent)
-        add_node(node_prompt, node_type="prompt", label=f"{agent}:{i}", text=prompt)
-        add_node(
-            node_state,
-            node_type="state",
-            label=f"state:{i}",
-            inj=inj,
-            drift=drift,
+        G.add_node(a, type="agent")
+        G.add_node(p, type="prompt", text=prompt)
+        G.add_node(
+            s,
+            type="state",
             blocked=blocked,
             reason=reason,
-            output=output,
-            norm=norm if norm is not None else -1.0,
+            drift=drift,
+            inj=inj,
+            viz_color=color(blocked, reason),
+            viz_size=10 + drift * 30 + inj * 20,
         )
 
-        add_edge(node_agent, node_prompt, edge_type="issued")
-        add_edge(node_prompt, node_state, edge_type="produced")
+        G.add_edge(a, p)
+        G.add_edge(p, s)
 
 nx.write_gexf(G, OUT)
-print("wrote", OUT)
-print("nodes", G.number_of_nodes())
-print("edges", G.number_of_edges())
+print("graph rebuilt")
