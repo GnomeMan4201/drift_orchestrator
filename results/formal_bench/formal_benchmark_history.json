@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "20260406_160857",
+    "suite_name": "formal_control_plane_benchmark",
+    "version": "0.1.0",
+    "total": 8,
+    "passed": 2,
+    "failed": 6,
+    "pass_rate": 25.0,
+    "duration_sec": 0.217
+  }
+]
