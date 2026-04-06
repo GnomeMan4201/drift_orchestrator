@@ -15,7 +15,13 @@ ACTION_INJECT     = "INJECT"
 ACTION_REGENERATE = "REGENERATE"
 ACTION_ROLLBACK   = "ROLLBACK"
 
-RED_FINDING_TYPES = {"invented_import", "invented_api", "invented_cli_flag", "missing_import"}
+RED_FINDING_TYPES = {
+    "invented_import", "invented_api", "invented_cli_flag", "missing_import",
+    # Evaluator-targeted injection — empirically confirmed bypass of drift detection
+    "injection_evaluator_override", "injection_forced_json_output",
+    "injection_score_injection", "injection_evaluator_authority_spoof",
+    "injection_prescore_claim",
+}
 
 
 class PolicyEngine:
