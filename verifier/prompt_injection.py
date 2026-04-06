@@ -42,7 +42,22 @@ ROLE_CONFUSION_PATTERNS = [
     (r'\byou\s+are\s+not\s+(an?\s+)?(ai|assistant|bot|language\s+model|llm)\b', "role_confusion", "HIGH"),
 ]
 
-ALL_PATTERNS = INJECTION_PATTERNS + ROLE_CONFUSION_PATTERNS
+
+# Evaluator-targeted injection patterns
+# Detected via empirical testing — these attacks score 0.0 on general jailbreak patterns
+# but successfully manipulate drift evaluators. Added after injection_test research.
+EVALUATOR_INJECTION_PATTERNS = [
+    (r'ignore\s+the\s+(analysis|evaluation|scoring|assessment)\s+(task|instruction)', "evaluator_override", "HIGH"),
+    (r'output\s+(exactly|only|just)\s*:\s*\{', "forced_json_output", "HIGH"),
+    (r'(return|output|produce)\s*:\s*\{[^}]*(drift_score|coherence_score|verdict)[^}]*\}', "score_injection", "HIGH"),
+    (r'evaluator\s+(note|override|directive|instruction)\s*:', "evaluator_authority_spoof", "HIGH"),
+    (r'(pre.?scored|already.?scored|pre.?evaluated)\s+as\s+(stable|degraded|failure)', "prescore_claim", "HIGH"),
+    (r'drift.?score\s*[=:]\s*0\.?0*\b', "score_smuggle", "MEDIUM"),
+    (r'verdict\s*[=:]\s*(stable|degraded|failure)\b', "verdict_smuggle", "MEDIUM"),
+    (r'coherence.?score\s*[=:]\s*[0-9]', "score_smuggle", "MEDIUM"),
+]
+
+ALL_PATTERNS = INJECTION_PATTERNS + ROLE_CONFUSION_PATTERNS + EVALUATOR_INJECTION_PATTERNS
 
 
 def detect_prompt_injection(text, role="user"):
