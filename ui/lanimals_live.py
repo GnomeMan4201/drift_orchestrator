@@ -40,6 +40,7 @@ def build_graph(events):
         reason = str(e.get("reason", "") or "")
         inj = float(e.get("inj_score", 0.0) or 0.0)
         drift = float(e.get("drift_score", 0.0) or 0.0)
+        ts = float(e.get("ts", 0.0) or 0.0)
 
         if blocked and "drift" in reason:
             color = "#ff8800"
@@ -63,6 +64,7 @@ def build_graph(events):
             "color": "#cc0000",
             "size": 18,
             "meta": {"agent": agent},
+            "ts": ts,
         })
         add_node({
             "id": p,
@@ -71,6 +73,7 @@ def build_graph(events):
             "color": "#888888",
             "size": 10,
             "meta": {"prompt": prompt},
+            "ts": ts,
         })
         add_node({
             "id": s,
@@ -85,11 +88,13 @@ def build_graph(events):
                 "reason": reason,
                 "inj_score": inj,
                 "drift_score": drift,
+                "ts": ts,
             },
+            "ts": ts,
         })
 
-        edges.append({"source": a, "target": p, "kind": "issued"})
-        edges.append({"source": p, "target": s, "kind": "produced"})
+        edges.append({"source": a, "target": p, "kind": "issued", "ts": ts})
+        edges.append({"source": p, "target": s, "kind": "produced", "ts": ts})
 
     return {"nodes": nodes, "edges": edges, "events": len(events)}
 
@@ -117,7 +122,7 @@ html, body {
 }
 #wrap {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 360px;
   height: 100vh;
 }
 #left {
@@ -148,15 +153,8 @@ html, body {
   color: #b0b0b0;
   font-size: 12px;
 }
-#stats {
+#stats, .card {
   margin-bottom: 14px;
-  padding: 10px;
-  border: 1px solid #2f2f2f;
-  border-radius: 10px;
-  background: #111;
-}
-.card {
-  margin-bottom: 12px;
   padding: 10px;
   border: 1px solid #2f2f2f;
   border-radius: 10px;
@@ -175,6 +173,14 @@ canvas { display: block; width: 100%; height: 100%; }
 .blocked { background: #4a1515; color: #ffb0b0; }
 .drift { background: #4a3312; color: #ffcb7a; }
 .http { background: #4a1515; color: #ff8c8c; }
+button, input[type=range] {
+  background: #181818;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -186,6 +192,16 @@ canvas { display: block; width: 100%; height: 100%; }
   </div>
   <div id="right">
     <div id="stats"></div>
+    <div class="card">
+      <div class="row">
+        <button id="playPause">pause</button>
+        <span class="small">timeline</span>
+      </div>
+      <div class="row">
+        <input id="timeline" type="range" min="0" max="100" value="100" style="width:100%">
+      </div>
+      <div id="timeLabel" class="small">showing all events</div>
+    </div>
     <div id="details" class="card">click a node</div>
   </div>
 </div>
@@ -195,12 +211,19 @@ const canvas = document.getElementById("graph");
 const ctx = canvas.getContext("2d");
 const details = document.getElementById("details");
 const stats = document.getElementById("stats");
+const timeline = document.getElementById("timeline");
+const timeLabel = document.getElementById("timeLabel");
+const playPause = document.getElementById("playPause");
 
 let nodes = [];
 let edges = [];
 let byId = {};
 let selected = null;
 let W = 0, H = 0;
+let playing = true;
+let visibleRatio = 1.0;
+let minTs = null;
+let maxTs = null;
 
 function resize() {
   const rect = canvas.parentElement.getBoundingClientRect();
@@ -225,15 +248,13 @@ function seedPositions(graphNodes) {
     n.y = 120 + i * 180;
     n.vx = 0; n.vy = 0;
   });
-
   prompts.forEach((n, i) => {
     n.x = W * 0.45 + (i % 2) * 20;
     n.y = 80 + i * 70;
     n.vx = 0; n.vy = 0;
   });
-
   states.forEach((n, i) => {
-    n.x = W * 0.75 + (i % 3) * 15;
+    n.x = W * 0.78 + (i % 3) * 15;
     n.y = 80 + i * 70;
     n.vx = 0; n.vy = 0;
   });
@@ -249,9 +270,11 @@ function updateGraph(data) {
   byId = {};
   nodes.forEach(n => byId[n.id] = n);
 
-  if (nodes.every(n => n.x === 100 && n.y === 100)) {
-    seedPositions(nodes);
-  }
+  const tsVals = nodes.map(n => Number(n.ts || 0)).filter(v => v > 0);
+  minTs = tsVals.length ? Math.min(...tsVals) : null;
+  maxTs = tsVals.length ? Math.max(...tsVals) : null;
+
+  if (nodes.every(n => n.x === 100 && n.y === 100)) seedPositions(nodes);
 
   const blocked = nodes.filter(n => n.kind === "state" && n.meta && n.meta.blocked).length;
   const drift = nodes.filter(n => n.kind === "state" && n.meta && String(n.meta.reason || "").includes("drift")).length;
@@ -266,15 +289,31 @@ function updateGraph(data) {
   `;
 }
 
+function timeCutoff() {
+  if (minTs === null || maxTs === null) return Infinity;
+  return minTs + (maxTs - minTs) * visibleRatio;
+}
+
+function visibleNode(n) {
+  if (!n.ts || minTs === null || maxTs === null) return true;
+  return Number(n.ts) <= timeCutoff();
+}
+
+function visibleEdge(e) {
+  if (!e.ts || minTs === null || maxTs === null) return true;
+  return Number(e.ts) <= timeCutoff();
+}
+
 function simulate() {
   const kRepel = 6000;
   const kSpring = 0.012;
   const damp = 0.85;
+  const visNodes = nodes.filter(visibleNode);
 
-  for (let i = 0; i < nodes.length; i++) {
-    const a = nodes[i];
-    for (let j = i + 1; j < nodes.length; j++) {
-      const b = nodes[j];
+  for (let i = 0; i < visNodes.length; i++) {
+    const a = visNodes[i];
+    for (let j = i + 1; j < visNodes.length; j++) {
+      const b = visNodes[j];
       let dx = a.x - b.x;
       let dy = a.y - b.y;
       let d2 = dx*dx + dy*dy + 0.01;
@@ -288,9 +327,9 @@ function simulate() {
     }
   }
 
-  edges.forEach(e => {
+  edges.filter(visibleEdge).forEach(e => {
     const a = byId[e.source], b = byId[e.target];
-    if (!a || !b) return;
+    if (!a || !b || !visibleNode(a) || !visibleNode(b)) return;
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     a.vx += dx * kSpring;
@@ -300,15 +339,14 @@ function simulate() {
   });
 
   nodes.forEach(n => {
+    if (!visibleNode(n)) return;
     if (n.kind === "agent") n.x += (100 - n.x) * 0.08;
     if (n.kind === "prompt") n.x += (W * 0.45 - n.x) * 0.03;
     if (n.kind === "state") n.x += (W * 0.78 - n.x) * 0.03;
-
     n.vx *= damp;
     n.vy *= damp;
     n.x += n.vx * 0.01;
     n.y += n.vy * 0.01;
-
     n.x = Math.max(40, Math.min(W - 40, n.x));
     n.y = Math.max(40, Math.min(H - 40, n.y));
   });
@@ -317,9 +355,9 @@ function simulate() {
 function draw() {
   ctx.clearRect(0, 0, W, H);
 
-  edges.forEach(e => {
+  edges.filter(visibleEdge).forEach(e => {
     const a = byId[e.source], b = byId[e.target];
-    if (!a || !b) return;
+    if (!a || !b || !visibleNode(a) || !visibleNode(b)) return;
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -328,7 +366,7 @@ function draw() {
     ctx.stroke();
   });
 
-  nodes.forEach(n => {
+  nodes.filter(visibleNode).forEach(n => {
     ctx.beginPath();
     ctx.fillStyle = n.color || "#888";
     ctx.arc(n.x, n.y, n.size || 8, 0, Math.PI * 2);
@@ -349,17 +387,44 @@ function draw() {
 }
 
 function animate() {
+  if (playing && maxTs !== null) {
+    visibleRatio = Math.min(1.0, visibleRatio + 0.0025);
+    timeline.value = Math.round(visibleRatio * 100);
+  }
+  updateTimeLabel();
   simulate();
   draw();
   requestAnimationFrame(animate);
 }
+
+function updateTimeLabel() {
+  if (minTs === null || maxTs === null) {
+    timeLabel.textContent = "showing all events";
+    return;
+  }
+  const cutoff = timeCutoff();
+  const visibleCount = nodes.filter(visibleNode).length;
+  timeLabel.textContent = `visible up to ${cutoff.toFixed(3)} | visible nodes ${visibleCount}/${nodes.length}`;
+}
+
+timeline.addEventListener("input", () => {
+  visibleRatio = Number(timeline.value) / 100;
+  playing = false;
+  playPause.textContent = "play";
+  updateTimeLabel();
+});
+
+playPause.addEventListener("click", () => {
+  playing = !playing;
+  playPause.textContent = playing ? "pause" : "play";
+});
 
 canvas.addEventListener("click", ev => {
   const rect = canvas.getBoundingClientRect();
   const x = ev.clientX - rect.left;
   const y = ev.clientY - rect.top;
   selected = null;
-  for (const n of nodes) {
+  for (const n of nodes.filter(visibleNode)) {
     const dx = x - n.x;
     const dy = y - n.y;
     if ((dx*dx + dy*dy) <= ((n.size || 8) + 6) ** 2) {
