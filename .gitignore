@@ -36,3 +36,6 @@ recovery.py.bak*
 scripts/record_demo.sh
 scripts/verify_demo.sh
 examples/*_collab.jsonl
+
+# local graph venv
+.venv_graph/
