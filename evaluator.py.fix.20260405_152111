@@ -108,6 +108,7 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
             (rep_score,               ALPHA_WEIGHTS["repetition_score"]),
         ]
         alpha = clamp(weighted_average(raw_alpha_inputs))
+        print(f"[TURN {last_turn_index}] alpha={alpha:.4f} divergence={ext_divergence if ext_divergence is not None else 0:.4f} status={action}", flush=True)
 
 
         raw_scores = {
@@ -181,9 +182,6 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
         emit_hallucination_findings(session_id, last_tid, hal)
         emit_injection_findings(session_id, last_tid, inj)
         emit_policy_finding(session_id, last_tid, action, alpha, reason)
-        div_val = ext_divergence if ext_divergence is not None else 0.0
-        print(f"[TURN {last_turn_index}] alpha={alpha:.4f} divergence={div_val:.4f} status={action}", flush=True)
-
 
         if action == "CONTINUE" and alpha < 0.50:
             create_checkpoint(session_id, branch_id, last_turn_index, status="green")

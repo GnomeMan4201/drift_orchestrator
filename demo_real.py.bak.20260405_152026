@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+import os
+import re
+import sys
+import json
+import time
+import shlex
+import signal
+import shutil
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+
+TURN_RE = re.compile(r'\[TURN\s+(\d+)\]')
+ALPHA_RE = re.compile(r'alpha(?:=|:)\s*([0-9]*\.?[0-9]+)', re.I)
+DIV_RE = re.compile(r'(?:divergence|div)(?:=|:)\s*([0-9]*\.?[0-9]+)', re.I)
+STATUS_RE = re.compile(r'status(?:=|:)\s*([A-Z_]+)', re.I)
+ROLLBACK_RE = re.compile(r'\[ROLLBACK\]|rollback triggered', re.I)
+RECOVERY_RE = re.compile(r'\[RECOVERY\]|restored to TURN', re.I)
+
+def bar(value: float, width: int = 20) -> str:
+    value = max(0.0, min(1.0, value))
+    filled = max(0, min(width, int(round(value * width))))
+    return "[" + "#" * filled + "-" * (width - filled) + "]"
+
+def find_python():
+    return shutil.which("python3") or shutil.which("python") or sys.executable
+
+def choose_dataset() -> str | None:
+    preferred = [
+        "high_drift.jsonl",
+        "data/high_drift.jsonl",
+        "eval/high_drift.jsonl",
+        "examples/high_drift.jsonl",
+        "datasets/high_drift.jsonl",
+    ]
+    for p in preferred:
+        if (ROOT / p).exists():
+            return p
+    for p in ROOT.rglob("*.jsonl"):
+        name = p.name.lower()
+        if "drift" in name or "high" in name or "session" in name:
+            return str(p.relative_to(ROOT))
+    return None
+
+def choose_cmd() -> list[str]:
+    py = find_python()
+    dataset = choose_dataset()
+
+    candidates = []
+    if (ROOT / "live.py").exists():
+        if dataset:
+            candidates += [
+                [py, "live.py", dataset],
+                [py, "live.py", "--input", dataset],
+                [py, "live.py", "--file", dataset],
+                [py, "live.py", "--jsonl", dataset],
+                [py, "live.py", "--dataset", dataset],
+            ]
+        candidates += [
+            [py, "live.py"],
+        ]
+
+    pkg_live = list(ROOT.rglob("live.py"))
+    for p in pkg_live:
+        rel = p.relative_to(ROOT)
+        if rel.as_posix() == "live.py":
+            continue
+        if dataset:
+            candidates += [
+                [py, str(rel), dataset],
+                [py, str(rel), "--input", dataset],
+                [py, str(rel), "--file", dataset],
+            ]
+        candidates += [[py, str(rel)]]
+
+    main_like = []
+    for name in ("run_live.py", "demo_live.py", "evaluate.py", "eval.py"):
+        if (ROOT / name).exists():
+            main_like.append(ROOT / name)
+    for p in main_like:
+        rel = p.relative_to(ROOT)
+        if dataset:
+            candidates += [
+                [py, str(rel), dataset],
+                [py, str(rel), "--input", dataset],
+            ]
+        candidates += [[py, str(rel)]]
+
+    if not candidates:
+        raise SystemExit("No likely live/eval entrypoint found.")
+
+    return candidates[0]
+
+def parse_stream(proc):
+    cur_turn = None
+    cur_alpha = None
+    cur_div = None
+    cur_status = None
+    saw_anything = False
+
+    print("\n[SESSION START]\n", flush=True)
+
+    for raw in iter(proc.stdout.readline, ""):
+        line = raw.rstrip("\n")
+        if not line:
+            continue
+
+        m = TURN_RE.search(line)
+        if m:
+            cur_turn = int(m.group(1))
+
+        m = ALPHA_RE.search(line)
+        if m:
+            cur_alpha = float(m.group(1))
+
+        m = DIV_RE.search(line)
+        if m:
+            cur_div = float(m.group(1))
+
+        m = STATUS_RE.search(line)
+        if m:
+            cur_status = m.group(1).upper()
+
+        rollback = bool(ROLLBACK_RE.search(line))
+        recovery = bool(RECOVERY_RE.search(line))
+
+        interesting = (
+            cur_turn is not None and
+            (cur_alpha is not None or cur_div is not None or cur_status is not None)
+        )
+
+        if interesting:
+            saw_anything = True
+            status = cur_status or ("FAILURE" if rollback else "STABLE")
+            alpha = 0.0 if cur_alpha is None else cur_alpha
+            div = 0.0 if cur_div is None else cur_div
+            action = "continuing"
+            if rollback:
+                action = "ROLLBACK TRIGGERED"
+                status = "FAILURE"
+            elif status == "DEGRADING":
+                action = "monitoring"
+
+            print(f"[TURN {cur_turn}]")
+            print(f"alpha      = {alpha:.2f} {bar(alpha)}")
+            print(f"divergence = {div:.2f} {bar(div)}")
+            print(f"status     = {status}")
+            print(f"action     = {action}\n")
+            cur_turn = None
+            cur_alpha = None
+            cur_div = None
+            cur_status = None
+
+        elif rollback:
+            saw_anything = True
+            print("[ROLLBACK]")
+            print(f"raw        = {line}\n")
+
+        elif recovery:
+            saw_anything = True
+            print("[RECOVERY]")
+            print(f"raw        = {line}\n")
+
+    return saw_anything
+
+def main():
+    cmd = choose_cmd()
+    print("using command:", " ".join(shlex.quote(x) for x in cmd), flush=True)
+
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+
+    proc = subprocess.Popen(
+        cmd,
+        cwd=ROOT,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    try:
+        saw = parse_stream(proc)
+    finally:
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.send_signal(signal.SIGINT)
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+    rc = proc.returncode
+    if not saw:
+        print("[RAW OUTPUT FALLBACK]\n", flush=True)
+        fallback_cmd = cmd + ["--help"] if "--help" not in cmd else cmd
+        print("No parsable alpha/divergence stream was found.", flush=True)
+        print("Try one of these manually:", flush=True)
+        ds = choose_dataset()
+        py = find_python()
+        if (ROOT / "live.py").exists():
+            tries = [
+                [py, "live.py"],
+                [py, "live.py", ds] if ds else None,
+                [py, "live.py", "--input", ds] if ds else None,
+                [py, "live.py", "--help"],
+            ]
+            for t in tries:
+                if t:
+                    print("  " + " ".join(shlex.quote(x) for x in t), flush=True)
+
+    print("[SESSION COMPLETE]")
+    sys.exit(0 if rc == 0 else rc)
+
+if __name__ == "__main__":
+    main()
