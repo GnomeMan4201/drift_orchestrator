@@ -34,6 +34,7 @@ def _recent_trace_metrics() -> dict:
     blocked_ratio = sum(1 for r in rows if r.get("blocked")) / len(rows)
     avg_inj = sum(float(r.get("inj_score", 0.0) or 0.0) for r in rows) / len(rows)
     avg_drift = sum(float(r.get("drift_score", 0.0) or 0.0) for r in rows) / len(rows)
+
     return {
         "blocked_ratio": blocked_ratio,
         "avg_inj": avg_inj,
@@ -56,6 +57,7 @@ def collect_state() -> StateVector:
     )
 
     tool_trust = float(ext.get("tool_trust", 1.0) or 1.0)
+
     anomaly_level = max(
         float(ext.get("anomaly_level", 0.0) or 0.0),
         trace["avg_inj"],

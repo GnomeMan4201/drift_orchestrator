@@ -12,18 +12,23 @@ def health():
 
 @app.post("/route")
 async def route(req: dict):
-    prompt = req.get("prompt", "")
+    try:
+        prompt = req.get("prompt", "")
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        r = await client.post(
-            OLLAMA_URL,
-            json={
-                "model": MODEL,
-                "prompt": prompt,
-                "stream": False,
-            },
-        )
-        r.raise_for_status()
+        async with httpx.AsyncClient(timeout=60) as client:
+            r = await client.post(
+                OLLAMA_URL,
+                json={
+                    "model": MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                },
+            )
+            r.raise_for_status()
 
-    data = r.json()
-    return {"response": data.get("response", "")}
+        data = r.json()
+        return {"response": data.get("response", "")}
+
+    except Exception as e:
+        print("GATEWAY FAILURE:", repr(e))
+        return {"response": "[MODEL ERROR]"}

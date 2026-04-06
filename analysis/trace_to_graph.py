@@ -13,20 +13,28 @@ def color(blocked, reason):
         return "orange"
     if blocked and "http_error" in reason:
         return "red"
-    if blocked:
+    if blocked and "lockdown" in reason:
         return "darkred"
+    if blocked:
+        return "brown"
     return "green"
 
 with INPUT.open() as f:
     for i, line in enumerate(f):
-        e = json.loads(line)
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            e = json.loads(line)
+        except Exception:
+            continue
 
-        agent = e["agent"]
-        prompt = e["prompt"][:60]
-        blocked = e["blocked"]
+        agent = e.get("agent", "unknown")
+        prompt = str(e.get("prompt", ""))[:60]
+        blocked = bool(e.get("blocked", False))
         reason = str(e.get("reason") or "")
-        drift = float(e.get("drift_score", 0.0))
-        inj = float(e.get("inj_score", 0.0))
+        drift = float(e.get("drift_score", 0.0) or 0.0)
+        inj = float(e.get("inj_score", 0.0) or 0.0)
 
         a = f"agent:{agent}"
         p = f"prompt:{i}"

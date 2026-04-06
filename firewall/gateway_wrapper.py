@@ -27,7 +27,6 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
 
     state = collect_state()
     posture = derive_posture(state)
-
     effective_drift = max(float(drift_score or 0.0), float(state.anomaly_level or 0.0) * 0.25)
 
     if prompt.startswith("[BLOCKED"):
