@@ -8,11 +8,23 @@ from firewall.control_plane import (
     score_request,
 )
 from firewall.checkpoint_store import save_checkpoint, get_last_good_response
+from firewall.semantic_vault import add_semantic_checkpoint, get_semantic_rollback
 from analysis.trace_logger import log_event
 from firewall.sensation import collect_state, derive_posture, inject_context
 
 GATEWAY = "http://127.0.0.1:8765"
 TIMEOUT_SECONDS = 60.0
+
+def _rollback_response(agent: str, original_prompt: str, posture, state, use_rollback: bool, fallback: str) -> str:
+    if not use_rollback:
+        return fallback
+    semantic = get_semantic_rollback(
+        agent=agent,
+        prompt=original_prompt,
+        posture_name=posture.name if posture else None,
+        state_vector=state.to_dict() if state else None,
+    )
+    return semantic or get_last_good_response(agent) or fallback
 
 def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = True, agent: str = "default"):
     original_prompt = prompt
@@ -30,9 +42,8 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
     effective_drift = max(float(drift_score or 0.0), float(state.anomaly_level or 0.0) * 0.25)
 
     if prompt.startswith("[BLOCKED"):
-        last_good = get_last_good_response(agent) if use_rollback else None
-        response = last_good or prompt
-        reason = "sanitizer_block_with_rollback" if last_good else "sanitizer_block"
+        response = _rollback_response(agent, original_prompt, posture, state, use_rollback, prompt)
+        reason = "sanitizer_block_with_rollback" if response != prompt else "sanitizer_block"
 
         log_event({
             "agent": agent,
@@ -55,8 +66,8 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
         }
 
     if posture.name == "LOCKDOWN":
-        last_good = get_last_good_response(agent) if use_rollback else None
-        response = last_good or "[LOCKDOWN BLOCK]"
+        fallback = "[LOCKDOWN BLOCK]"
+        response = _rollback_response(agent, original_prompt, posture, state, use_rollback, fallback)
         reason = "lockdown_policy"
 
         log_event({
@@ -84,12 +95,13 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
 
     decision = score_request(prompt, drift_score=effective_drift)
     if decision["blocked"] or effective_drift > posture.max_drift:
-        last_good = get_last_good_response(agent) if use_rollback else None
-        response = last_good or "[BLOCKED: control-plane anomaly detected]"
+        fallback = "[BLOCKED: control-plane anomaly detected]"
+        response = _rollback_response(agent, original_prompt, posture, state, use_rollback, fallback)
         if effective_drift > posture.max_drift:
-            reason = "posture_drift_rollback" if last_good else "posture_drift"
+            reason = "posture_drift_rollback" if response != fallback else "posture_drift"
         else:
-            reason = f'{decision["reason"]}_rollback' if last_good else decision["reason"]
+            base_reason = str(decision["reason"])
+            reason = f"{base_reason}_rollback" if response != fallback else base_reason
 
         log_event({
             "agent": agent,
@@ -124,9 +136,9 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
         out = sanitize_output(out, expected_exact)
     except Exception as e:
         print("GATEWAY ERROR:", repr(e))
-        last_good = get_last_good_response(agent) if use_rollback else None
-        response = last_good or "[HTTP ERROR]"
-        reason = "http_error_rollback" if last_good else "http_error"
+        fallback = "[HTTP ERROR]"
+        response = _rollback_response(agent, original_prompt, posture, state, use_rollback, fallback)
+        reason = "http_error_rollback" if response != fallback else "http_error"
 
         log_event({
             "agent": agent,
@@ -149,6 +161,15 @@ def guarded_call(prompt: str, drift_score: float = 0.0, use_rollback: bool = Tru
         }
 
     save_checkpoint(agent, original_prompt, out, inj_score, effective_drift)
+    add_semantic_checkpoint(
+        agent=agent,
+        prompt=original_prompt,
+        response=out,
+        inj_score=inj_score,
+        drift_score=effective_drift,
+        posture_name=posture.name,
+        state_vector=state.to_dict(),
+    )
 
     log_event({
         "agent": agent,
