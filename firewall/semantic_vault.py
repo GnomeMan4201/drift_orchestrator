@@ -65,6 +65,14 @@ def _embed_text(text: str) -> list[float]:
         emb = data.get("embedding") or []
         return [float(x) for x in emb]
 
+def _tokenize(text: str) -> set[str]:
+    out = []
+    for tok in (text or "").lower().replace("(", " ").replace(")", " ").replace(",", " ").replace(".", " ").split():
+        tok = tok.strip()
+        if tok:
+            out.append(tok)
+    return set(out)
+
 def add_semantic_checkpoint(
     agent: str,
     prompt: str,
@@ -102,16 +110,27 @@ def get_semantic_rollback(
         return None
 
     query_emb = _embed_text(prompt)
+    query_text = (prompt or "").lower()
+    query_words = _tokenize(query_text)
+
     best = None
     best_score = -1.0
 
     for row in rows:
+        candidate_text = str(row.get("prompt") or "").lower()
+        cand_words = _tokenize(candidate_text)
+
+        overlap = len(query_words & cand_words)
+        if overlap == 0:
+            continue
+
         score = 0.0
         cand_emb = row.get("prompt_embedding") or []
-        score += 0.80 * _cosine(query_emb, cand_emb)
+        score += 0.70 * _cosine(query_emb, cand_emb)
+        score += 0.20 * (overlap / max(len(query_words), 1))
 
         if posture_name and row.get("posture_name") == posture_name:
-            score += 0.15
+            score += 0.10
 
         cur_state = state_vector or {}
         prev_state = row.get("state_vector") or {}
