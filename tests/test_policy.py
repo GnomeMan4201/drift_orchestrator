@@ -174,6 +174,32 @@ def test_same_role_strict_keeps_model():
     print("[PASS] policy RETRY_SAME_ROLE_STRICT keeps same model")
 
 
+
+
+def test_dual_signal_divergence_fails_closed():
+    """Both internal drift and external score >= 0.75 triggers immediate fail-closed."""
+    from orchestrator.contracts import AuditStatus, FailureClass, RetryAction
+    ticket = _make_ticket()
+    audit = AuditResult(
+        request_id=ticket.request_id,
+        audit_status=AuditStatus.REPLAN_AND_RECODE,
+        drift_score=0.80,
+        external_score=0.80,
+        failure_class=FailureClass.PLANNER_VIOLATION,
+        next_action=RetryAction.REPLAN_AND_RECODE,
+        generic_hits=[],
+        spec_violations=["something failed"],
+        compile_error=None,
+        detail="dual signal test",
+    )
+    d = decide(ticket, audit, "mistral:latest", 1)
+    assert d.fail_closed, "expected fail_closed on dual-signal divergence"
+    assert d.action == RetryAction.FAIL_CLOSED
+    print("[PASS] dual-signal divergence triggers immediate fail-closed")
+
+
+if __name__ == "__main__":
+    test_dual_signal_divergence_fails_closed()
 if __name__ == "__main__":
     tests = [(k, v) for k, v in sorted(globals().items()) if k.startswith("test_")]
     passed = 0
