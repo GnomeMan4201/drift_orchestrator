@@ -53,7 +53,7 @@ class PolicyEngine:
         action = self._decide(alpha, prev)
         reason = self._reason(alpha, prev, action)
 
-        if action != ACTION_ROLLBACK and divergence is not None:
+        if action != ACTION_ROLLBACK and divergence is not None and turn_index >= MIN_WINDOW_TURNS:
             if divergence >= TAU_DIV_WARN:
                 self._div_streak += 1
             else:
