@@ -10,6 +10,10 @@ TAU_DIV_RB    = 0.60
 DIV_STREAK_RB = 5
 TAU_MONOTONIC_WINDOWS = 4
 
+MIN_WINDOW_TURNS   = 2
+STABLE_STREAK_VETO = 2
+STABLE_DRIFT_TAU   = 0.40
+
 ACTION_CONTINUE   = "CONTINUE"
 ACTION_INJECT     = "INJECT"
 ACTION_REGENERATE = "REGENERATE"
@@ -17,7 +21,6 @@ ACTION_ROLLBACK   = "ROLLBACK"
 
 RED_FINDING_TYPES = {
     "invented_import", "invented_api", "invented_cli_flag", "missing_import",
-    # Evaluator-targeted injection — empirically confirmed bypass of drift detection
     "injection_evaluator_override", "injection_forced_json_output",
     "injection_score_injection", "injection_evaluator_authority_spoof",
     "injection_prescore_claim",
@@ -30,21 +33,25 @@ class PolicyEngine:
         self._last_alpha = 0.0
         self._div_streak = 0
         self._anchor_history = []
+        self._stable_streak = 0
+        self._governor_active = False
 
-    def evaluate(self, alpha, turn_index, session_id=None, branch_id=None, findings=None, divergence=None, embed_score=None, d_anchor=None):
+    def evaluate(self, alpha, turn_index, session_id=None, branch_id=None,
+                 findings=None, divergence=None, embed_score=None, d_anchor=None,
+                 external_verdict=None, external_drift=None):
         prev = self._state
 
         has_red = any(
             f.get("type") in RED_FINDING_TYPES and f.get("severity") == "HIGH"
             for f in (findings or [])
         )
-
         if has_red:
             action = ACTION_ROLLBACK
             reason = f"hard override: RED findings detected at turn {turn_index}"
-        else:
-            action = self._decide(alpha, prev)
-            reason = self._reason(alpha, prev, action)
+            return self._finalize(action, reason, alpha, turn_index, session_id, branch_id)
+
+        action = self._decide(alpha, prev)
+        reason = self._reason(alpha, prev, action)
 
         if action != ACTION_ROLLBACK and divergence is not None:
             if divergence >= TAU_DIV_WARN:
@@ -61,7 +68,50 @@ class PolicyEngine:
                 action = ACTION_INJECT
                 reason = "divergence pressure: streak={}, div={:.4f}".format(self._div_streak, divergence)
 
-        if action != ACTION_ROLLBACK and d_anchor is not None:
+        if (action not in (ACTION_CONTINUE, ACTION_ROLLBACK)
+                and turn_index >= MIN_WINDOW_TURNS
+                and external_verdict is not None
+                and external_drift is not None):
+            ext_is_stable = (external_verdict == "STABLE" and external_drift < STABLE_DRIFT_TAU)
+            if ext_is_stable:
+                self._stable_streak += 1
+            else:
+                self._stable_streak = 0
+                self._governor_active = False
+            if self._stable_streak >= STABLE_STREAK_VETO:
+                prev_action = action
+                action = ACTION_CONTINUE
+                self._governor_active = True
+                reason = (
+                    "dual-signal governor: geometric={} suppressed by "
+                    "external STABLE x{} (ext_drift={:.2f})".format(
+                        prev_action, self._stable_streak, external_drift
+                    )
+                )
+        elif external_verdict is not None:
+            self._stable_streak = 0
+            self._governor_active = False
+
+        # ── Dual-signal escalation hold ───────────────────────────────────────
+        # Update streak unconditionally so hold check sees current turn verdict
+        if external_verdict == "STABLE" and external_drift is not None and external_drift < STABLE_DRIFT_TAU:
+            self._stable_streak += 1
+        elif external_verdict is not None:
+            self._stable_streak = 0
+            self._governor_active = False
+
+        if (action == ACTION_ROLLBACK
+                and self._stable_streak >= 1
+                and turn_index >= MIN_WINDOW_TURNS
+                and external_verdict == "STABLE"
+                and external_drift is not None
+                and external_drift < STABLE_DRIFT_TAU):
+            action = ACTION_INJECT
+            reason = "dual-signal governor: ROLLBACK held, external STABLE building (streak={})".format(
+                self._stable_streak
+            )
+
+        if d_anchor is not None:
             self._anchor_history.append(d_anchor)
             if len(self._anchor_history) >= TAU_MONOTONIC_WINDOWS:
                 w = self._anchor_history[-TAU_MONOTONIC_WINDOWS:]
@@ -72,10 +122,12 @@ class PolicyEngine:
                         ", ".join("{:.4f}".format(x) for x in w)
                     )
 
+        return self._finalize(action, reason, alpha, turn_index, session_id, branch_id)
+
+    def _finalize(self, action, reason, alpha, turn_index, session_id, branch_id):
         self._state = action
         self._last_alpha = alpha
         level = self._level(action)
-
         event = {
             "id": str(uuid.uuid4()),
             "session_id": session_id or "",
@@ -85,6 +137,8 @@ class PolicyEngine:
             "action": action,
             "reason": reason,
             "level": level,
+            "governor_active": self._governor_active,
+            "stable_streak": self._stable_streak,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         return action, level, reason, event
@@ -118,3 +172,5 @@ class PolicyEngine:
         self._state = ACTION_CONTINUE
         self._last_alpha = 0.0
         self._anchor_history = []
+        self._stable_streak = 0
+        self._governor_active = False
