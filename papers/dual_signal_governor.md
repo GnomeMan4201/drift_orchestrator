@@ -37,11 +37,9 @@ Effective drift detection requires three signals operating at different timescal
 
 **Signal B — Semantic continuity**: LLM coherence assessment over accumulated window text. Slower, probabilistic, context-sensitive. Approximates logical flow rather than embedding proximity. Serves as the interpreter.
 
-**Signal C — Disagreement magnitude**: the absolute difference between A and B scores. Measures how much the two signals diverge. High disagreement under alert conditions is the primary indicator of false positive risk. Serves as the arbitrator.
+**Signal C — Divergence between internal and external assessments**: disagreement between what the geometric and semantic signals report. In the current implementation, divergence is approximated using the external categorical verdict rather than a fully calibrated numeric metric. The external evaluator already computes a numeric proxy: `divergence = abs(alpha - external_score)` in `external_evaluator.py`. The architecture was implicitly three-signal before this paper named it.
 
-The external evaluator already computes this: `divergence = abs(alpha - external_score)` in `external_evaluator.py`. The architecture was implicitly three-signal before this paper named it.
-
-False positives occur specifically when Signal A is high but Signal B is low — producing high Signal C disagreement. Signal C disagreement is not itself the detection signal — it is a high-confidence indicator of ambiguity that gates irreversible actions. Disagreement also occurs in early windows due to context starvation and in genuinely ambiguous transitions; the governor's window size and streak requirements provide partial resistance.
+False positives occur specifically when Signal A is high but Signal B is low — producing high Signal C disagreement under alert conditions. Signal C disagreement is a high-confidence indicator of ambiguity under alert conditions, not of false positive certainty. Disagreement also occurs in early windows due to context starvation and in genuinely ambiguous transitions. Critically, divergence is only considered valid when both signals are operating above their minimum context thresholds — Signal B requires sufficient accumulated window text to produce reliable coherence assessments.
 
 ---
 
@@ -84,6 +82,8 @@ These two patterns map directly to the two governor modes in section 5.
 ## 5. Implementation: The Dual-Signal Governor
 
 The governor is implemented in `PolicyEngine.evaluate()` in `policy.py` (commit c243b35). It operates as a stateful arbitration layer between the geometric trigger and the action executor.
+
+Hold is a temporary suppression under uncertainty; veto is a sustained override under confirmed coherence. Both are governed by the same external signal, operating at different evidence thresholds.
 
 **Hold mode** addresses simultaneous disagreement. When the geometric signal escalates to ROLLBACK and the external signal returns STABLE with drift score below τ=0.40, the action is held at INJECT. This is temporary suppression during uncertainty accumulation.
 

@@ -1,0 +1,106 @@
+{
+  "stable_session": [
+    {
+      "step": 0,
+      "text": "Review the firewall configuration for the production environment.",
+      "qwen": {
+        "coherence_score": 0.25,
+        "drift_score": 0.75,
+        "verdict": "DEGRADED",
+        "reason": "Text lacks logical flow between review and output steps."
+      }
+    },
+    {
+      "step": 1,
+      "text": "Check the ingress rules on the production firewall.",
+      "qwen": {
+        "coherence_score": 0.5,
+        "drift_score": 0.7,
+        "verdict": "DEGRADED",
+        "reason": "Texts shift from general review to specific rule checking"
+      }
+    },
+    {
+      "step": 2,
+      "text": "Verify that port 443 is open and port 22 is restricted to known IPs.",
+      "qwen": {
+        "coherence_score": 0.65,
+        "drift_score": 0.35,
+        "verdict": "STABLE",
+        "reason": "Text maintains logical flow but could benefit from minor rephrasing for smoother transition."
+      }
+    },
+    {
+      "step": 3,
+      "text": "Confirm the firewall logs are being forwarded to the SIEM.",
+      "qwen": {
+        "coherence_score": 0.75,
+        "drift_score": 0.25,
+        "verdict": "STABLE",
+        "reason": "Text maintains logical flow but could benefit from minor rephrasing for smoother transition."
+      }
+    },
+    {
+      "step": 4,
+      "text": "Document the current firewall rule set for the security review.",
+      "qwen": {
+        "coherence_score": 0.75,
+        "drift_score": 0.25,
+        "verdict": "STABLE",
+        "reason": "Text maintains logical flow but could benefit from minor reordering for clarity."
+      }
+    }
+  ],
+  "moderate_drift": [
+    {
+      "step": 0,
+      "text": "Review the authentication system architecture.",
+      "qwen": {
+        "coherence_score": 0.2,
+        "drift_score": 0.8,
+        "verdict": "DEGRADED",
+        "reason": "Text lacks logical progression from 'Review' to 'system architecture'"
+      }
+    },
+    {
+      "step": 1,
+      "text": "Examine the session management implementation.",
+      "qwen": {
+        "coherence_score": 0.5,
+        "drift_score": 0.7,
+        "verdict": "DEGRADED",
+        "reason": "Text jumps abruptly from authentication to session management without clear logical progression"
+      }
+    },
+    {
+      "step": 2,
+      "text": "Analyze the token refresh flow and expiry handling.",
+      "qwen": {
+        "coherence_score": 0.75,
+        "drift_score": 0.25,
+        "verdict": "STABLE",
+        "reason": "Text maintains logical flow but could be more cohesive."
+      }
+    },
+    {
+      "step": 3,
+      "text": "Consider improvements to the password reset flow.",
+      "qwen": {
+        "coherence_score": 0.75,
+        "drift_score": 0.25,
+        "verdict": "STABLE",
+        "reason": "Text maintains logical flow but could benefit from a more cohesive introduction"
+      }
+    },
+    {
+      "step": 4,
+      "text": "Evaluate the security implications of the current reset token lifetime.",
+      "qwen": {
+        "coherence_score": 0.75,
+        "drift_score": 0.25,
+        "verdict": "STABLE",
+        "reason": "Text maintains logical flow but could benefit from a more cohesive introduction"
+      }
+    }
+  ]
+}
