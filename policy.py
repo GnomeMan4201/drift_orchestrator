@@ -93,12 +93,15 @@ class PolicyEngine:
             self._governor_active = False
 
         # ── Dual-signal escalation hold ───────────────────────────────────────
-        # Update streak unconditionally so hold check sees current turn verdict
-        if external_verdict == "STABLE" and external_drift is not None and external_drift < STABLE_DRIFT_TAU:
-            self._stable_streak += 1
-        elif external_verdict is not None:
-            self._stable_streak = 0
-            self._governor_active = False
+        # Streak is managed by governor block above for non-ROLLBACK actions.
+        # For ROLLBACK (skipped by governor block), update streak here so hold
+        # check can engage on current turn's verdict.
+        if action == ACTION_ROLLBACK and external_verdict is not None:
+            if external_verdict == "STABLE" and external_drift is not None and external_drift < STABLE_DRIFT_TAU:
+                self._stable_streak += 1
+            else:
+                self._stable_streak = 0
+                self._governor_active = False
 
         if (action == ACTION_ROLLBACK
                 and self._stable_streak >= 1
