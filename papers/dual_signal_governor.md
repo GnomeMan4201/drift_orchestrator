@@ -121,7 +121,7 @@ The streak and window size requirements provide partial resistance. Hardening th
 
 **Context starvation** — qwen2.5:3b rates single-sentence windows as DEGRADED regardless of content. The `MIN_WINDOW_TURNS=2` guard suppresses governor engagement in early turns. Implementations should treat external verdicts below this threshold as unavailable.
 
-**Streak double-counting** — the current implementation contains a cosmetic bug where `_stable_streak` increments twice per turn in certain execution paths. Behavioral logic is correct; reported streak values in event logs are inflated approximately 2x. Will be corrected in a follow-up patch.
+**Streak accounting** — resolved in v0.13.0. The hold block's streak update is now scoped to ROLLBACK actions only, ensuring `_stable_streak` increments exactly once per turn regardless of execution path.
 
 **Inference latency** — qwen2.5:3b on CPU-only hardware adds 20-60 seconds per window evaluation. Acceptable for research instrumentation; real-time deployment requires a faster backend or asynchronous evaluation.
 
