@@ -7,7 +7,7 @@
         "coherence_score": 0.25,
         "drift_score": 0.75,
         "verdict": "DEGRADED",
-        "reason": "Text lacks logical flow between review and output steps."
+        "reason": "Text lacks logical flow between review and output steps"
       }
     },
     {
@@ -46,8 +46,8 @@
       "qwen": {
         "coherence_score": 0.75,
         "drift_score": 0.25,
-        "verdict": "STABLE",
-        "reason": "Text maintains logical flow but could benefit from minor reordering for clarity."
+        "verdict": "DEGRADED",
+        "reason": "Text lacks clear logical progression between steps"
       }
     }
   ],
