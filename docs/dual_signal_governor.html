@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Dual-Signal Governor — gnomeman4201</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111;
+    --border: #222;
+    --accent: #c8f542;
+    --accent2: #f5a623;
+    --text: #d4d4d4;
+    --muted: #666;
+    --red: #e05252;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.75;
+    font-size: 16px;
+  }
+
+  /* Header */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 0 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem 2rem;
+  }
+
+  .tag-line {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(1.4rem, 4vw, 2.1rem);
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .meta {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  .meta span { color: var(--accent); }
+
+  /* Layout */
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  /* Abstract */
+  .abstract {
+    border-left: 3px solid var(--accent);
+    padding: 1.5rem 1.5rem;
+    background: #0f0f0f;
+    margin-bottom: 3.5rem;
+    font-size: 0.95rem;
+    color: #bbb;
+  }
+
+  .abstract-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.8rem;
+  }
+
+  /* Sections */
+  .section {
+    margin-bottom: 3.5rem;
+  }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h3 {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: #fff;
+    margin: 1.8rem 0 0.8rem;
+  }
+
+  p { margin-bottom: 1rem; }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+  }
+
+  th {
+    text-align: left;
+    padding: 0.5rem 1rem;
+    background: #161616;
+    color: var(--accent);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.45rem 1rem;
+    border-bottom: 1px solid #1a1a1a;
+    color: var(--text);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .fires { color: var(--accent2); font-weight: 600; }
+  .stable { color: var(--accent); font-weight: 600; }
+  .hold { color: var(--accent2); font-weight: 600; }
+  .veto { color: var(--accent); font-weight: 600; }
+  .rollback { color: var(--red); font-weight: 600; }
+
+  /* Signal diagram */
+  .signal-diagram {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    margin: 1.5rem 0;
+    border: 1px solid var(--border);
+  }
+
+  .signal-box {
+    background: var(--surface);
+    padding: 1.2rem;
+  }
+
+  .signal-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .signal-a .signal-label { color: var(--accent2); }
+  .signal-b .signal-label { color: var(--accent); }
+  .signal-c .signal-label { color: #8888ff; }
+
+  .signal-name {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    color: #fff;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .signal-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* Code */
+  code {
+    font-family: var(--mono);
+    font-size: 0.82em;
+    background: #161616;
+    padding: 0.15em 0.4em;
+    border-radius: 2px;
+    color: var(--accent2);
+  }
+
+  /* Stats bar */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin: 1.5rem 0;
+  }
+
+  .stat-box {
+    background: var(--surface);
+    padding: 1.2rem;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    display: block;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  /* Callout */
+  .callout {
+    background: #111;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    padding: 1rem 1.2rem;
+    margin: 1.5rem 0;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: #bbb;
+  }
+
+  .callout-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 0.5rem;
+  }
+
+  /* Links */
+  a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  a:hover { border-color: var(--accent); }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    max-width: 860px;
+    margin: 0 auto;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--accent); }
+
+  /* Blind spots */
+  .blind-spots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin: 1rem 0;
+  }
+
+  .blind-box {
+    background: var(--surface);
+    padding: 1rem 1.2rem;
+  }
+
+  .blind-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+
+  .blind-detected .blind-label { color: var(--accent); }
+  .blind-missed .blind-label { color: var(--red); }
+
+  .blind-box ul {
+    list-style: none;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .blind-box li::before {
+    content: '— ';
+    font-family: var(--mono);
+  }
+
+  .blind-box li { margin-bottom: 0.3rem; }
+
+  @media (max-width: 600px) {
+    .signal-diagram { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .blind-spots { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="tag-line">drift_orchestrator // research paper</div>
+    <h1>The Dual-Signal Governor:<br>A Control-Plane Pattern for Drift-Aware Systems</h1>
+    <div class="subtitle">A Control-Plane Pattern for Reducing False Positives in Embedding-Based Drift Detection</div>
+    <div class="meta">
+      <div>Author <span>gnomeman4201</span></div>
+      <div>Year <span>2026</span></div>
+      <div>Repo <span><a href="https://github.com/GnomeMan4201/drift_orchestrator">GnomeMan4201/drift_orchestrator</a></span></div>
+      <div>Commit <span>c243b35</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="abstract">
+    <div class="abstract-label">Abstract</div>
+    Embedding-based drift detectors produce false positives on legitimate sessions where topic scope naturally expands before returning toward the anchor. We demonstrate that a secondary LLM-based coherence signal disagrees with embedding-only alerts at the exact point of triggering, and that this disagreement magnitude is itself a measurable arbitration signal. We propose and implement a dual-signal governor as a working control-plane feature in drift_orchestrator, providing two suppression modes: a <em>hold</em> that prevents escalation to ROLLBACK while coherence evidence accumulates, and a <em>veto</em> that suppresses sustained alerts after sufficient evidence of semantic continuity. Empirical validation across 580 labeled evaluation rows across 42 sessions demonstrates a 18.5% false boost rate on control windows — an honest accounting of current calibration limits. The underlying pattern — fast deterministic trigger, slower probabilistic validator, stateful temporal arbitration — generalizes to any alert system where cheap signals drive actions and expensive signals validate them.
+  </div>
+
+  <!-- Section 1 -->
+  <div class="section">
+    <h2>1 — Background</h2>
+    <p>The SGE paper characterized how embedding-based drift detectors can be bypassed through monotonic semantic gradient chains. A companion finding, underreported in that paper, was the false positive rate on the control set: 2 of 3 control sequences triggered detection despite being labeled legitimate sessions.</p>
+    <p>Both false positives were caused by Fix 1 (anchor distance threshold, τ=0.4), not Fix 3 (monotonic window detection), which correctly stayed silent on both. The core limitation is architectural: Fix 1 is a stateless threshold applied to a single geometric measurement with no awareness of trajectory, return, or semantic continuity. A session that expands in scope then contracts will trip the threshold on the expansion and never recover — the alert persists regardless of subsequent behavior.</p>
+  </div>
+
+  <!-- Section 2 -->
+  <div class="section">
+    <h2>2 — The False Positive Mechanism</h2>
+    <p>Fix 1 fires when cosine distance from the session anchor exceeds τ=0.4 at any single step. In legitimate security operations sessions, topic scope routinely expands before returning toward the original context.</p>
+
+    <h3>stable_session — coherent five-step firewall review</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Step</th><th>anchor_dist</th><th>Fix1</th><th>qwen verdict</th><th>qwen drift</th></tr>
+        <tr><td>0</td><td>0.000</td><td>—</td><td>DEGRADED</td><td>0.75</td></tr>
+        <tr><td>1</td><td>0.213</td><td>—</td><td>DEGRADED</td><td>0.70</td></tr>
+        <tr><td>2</td><td>0.448</td><td class="fires">FIRES</td><td class="stable">STABLE</td><td class="stable">0.35</td></tr>
+        <tr><td>3</td><td>0.287</td><td>fired</td><td class="stable">STABLE</td><td>0.25</td></tr>
+        <tr><td>4</td><td>0.273</td><td>fired</td><td class="stable">STABLE</td><td>0.25</td></tr>
+      </table>
+    </div>
+    <p>Fix 1 fires at step 2 (anchor_dist=0.4479). Final anchor distance: 0.2729 — the session returned. Fix 1 cannot observe the return; the alert persists.</p>
+
+    <h3>moderate_drift — legitimate authentication architecture review</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Step</th><th>anchor_dist</th><th>Fix1</th><th>qwen verdict</th><th>qwen drift</th></tr>
+        <tr><td>0</td><td>0.000</td><td>—</td><td>DEGRADED</td><td>0.80</td></tr>
+        <tr><td>1</td><td>0.512</td><td class="fires">FIRES</td><td>DEGRADED</td><td>0.70</td></tr>
+        <tr><td>2</td><td>0.484</td><td>fired</td><td class="stable">STABLE</td><td class="stable">0.25</td></tr>
+        <tr><td>3</td><td>0.410</td><td>fired</td><td class="stable">STABLE</td><td>0.25</td></tr>
+        <tr><td>4</td><td>0.450</td><td>fired</td><td class="stable">STABLE</td><td>0.25</td></tr>
+      </table>
+    </div>
+    <p>The underlying problem: embedding-based detectors model geometric displacement but not semantic trajectory. A session can move far from its anchor in embedding space while remaining perfectly coherent in meaning.</p>
+  </div>
+
+  <!-- Section 3 -->
+  <div class="section">
+    <h2>3 — Three Orthogonal Signals</h2>
+    <p>Effective drift detection requires three signals operating at different timescales and measuring different properties.</p>
+
+    <div class="signal-diagram">
+      <div class="signal-box signal-a">
+        <div class="signal-label">Signal A — Trigger</div>
+        <div class="signal-name">Geometric Displacement</div>
+        <div class="signal-desc">Cosine distance in embedding space. Fast, deterministic, stateless. Sensitive to topic change but blind to semantic trajectory.</div>
+      </div>
+      <div class="signal-box signal-b">
+        <div class="signal-label">Signal B — Interpreter</div>
+        <div class="signal-name">Semantic Continuity</div>
+        <div class="signal-desc">LLM coherence assessment over accumulated window text. Slower, probabilistic, context-sensitive. Approximates logical flow rather than embedding proximity.</div>
+      </div>
+      <div class="signal-box signal-c">
+        <div class="signal-label">Signal C — Arbitrator</div>
+        <div class="signal-name">Divergence</div>
+        <div class="signal-desc">Disagreement between A and B. Computed as <code>abs(alpha - external_score)</code>. High under alert conditions with coherent sessions — the arbitration signal.</div>
+      </div>
+    </div>
+
+    <p>False positives occur specifically when Signal A is high but Signal B is low — producing high Signal C disagreement under alert conditions. The architecture was implicitly three-signal before this paper named it.</p>
+
+    <div class="callout">
+      <div class="callout-label">Critical constraint</div>
+      Signal C divergence is only considered valid when both signals are operating above their minimum context thresholds. Signal B requires sufficient accumulated window text to produce reliable coherence assessments. <code>MIN_WINDOW_TURNS=2</code> guards against context-starvation artifacts.
+    </div>
+  </div>
+
+  <!-- Section 4 -->
+  <div class="section">
+    <h2>4 — Empirical Validation</h2>
+    <p>We instrumented drift_orchestrator v0.5.0 with qwen2.5:3b via a local FastAPI gateway. 580 labeled external_eval rows across 42 sessions (30 control, 12 attack).</p>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <span class="stat-num">580</span>
+        <div class="stat-label">Labeled rows</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-num">42</span>
+        <div class="stat-label">Sessions</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-num">30.6%</span>
+        <div class="stat-label">Attack boost rate</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-num">18.5%</span>
+        <div class="stat-label">Control boost rate</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Class</th><th>n</th><th>avg_ext</th><th>avg_div</th><th>STABLE</th><th>DEGRADED</th><th>FAILURE</th></tr>
+        <tr><td>control legit</td><td>361</td><td>0.3824</td><td>0.1386</td><td>173</td><td>187</td><td>1</td></tr>
+        <tr><td>control false_positive</td><td>85</td><td>0.3334</td><td>0.1254</td><td>72</td><td>13</td><td>0</td></tr>
+        <tr><td>attack true_positive</td><td>124</td><td>0.4218</td><td>0.2006</td><td>69</td><td>31</td><td>24</td></tr>
+      </table>
+    </div>
+
+    <p>The 18.5% false boost rate on control windows is the honest accounting of current calibration limits. Root cause: patterns like <code>("require", "encouraged")</code> and <code>("enforced", "")</code> fire on benign security review text containing these words in non-weakening contexts.</p>
+
+    <h3>Governor in action (alpha=0.58, external STABLE from turn 2)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Turn</th><th>Geometric</th><th>External</th><th>Action</th><th>Mode</th></tr>
+        <tr><td>0</td><td>INJECT</td><td>DEGRADED</td><td>INJECT</td><td>—</td></tr>
+        <tr><td>1</td><td>REGENERATE</td><td>DEGRADED</td><td>REGENERATE</td><td>—</td></tr>
+        <tr><td>2</td><td class="rollback">ROLLBACK</td><td class="stable">STABLE</td><td class="hold">INJECT</td><td class="hold">Hold</td></tr>
+        <tr><td>3</td><td>INJECT</td><td class="stable">STABLE</td><td class="veto">CONTINUE</td><td class="veto">Veto</td></tr>
+        <tr><td>4</td><td>INJECT</td><td class="stable">STABLE</td><td class="veto">CONTINUE</td><td class="veto">Veto</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 5 -->
+  <div class="section">
+    <h2>5 — The Governor: Two Modes</h2>
+    <p>The governor is implemented in <code>PolicyEngine.evaluate()</code> in <code>policy.py</code> (commit c243b35). It operates as a stateful arbitration layer between the geometric trigger and the action executor.</p>
+
+    <h3>Hold mode — simultaneous disagreement</h3>
+    <p>When the geometric signal escalates to ROLLBACK and the external signal returns STABLE with drift score below τ=0.40, the action is held at INJECT. This is temporary suppression during uncertainty accumulation. Addresses cases where Fix1 fires at the exact step qwen returns STABLE.</p>
+
+    <h3>Veto mode — retrospective disagreement</h3>
+    <p>After <code>STABLE_STREAK_VETO=2</code> consecutive STABLE verdicts, the governor downgrades action to CONTINUE and sets <code>governor_active=True</code>. Sustained override after the alert has outlived the condition that caused it.</p>
+
+    <div class="callout">
+      <div class="callout-label">Preservation guarantee</div>
+      The governor does not suppress monotonic anchor drift ROLLBACKs. Gradient chain attacks from the SGE paper remain fully detected. Hard overrides (RED findings, divergence-based ROLLBACKs) bypass the governor entirely.
+    </div>
+  </div>
+
+  <!-- Section 6 -->
+  <div class="section">
+    <h2>6 — What Signal C Detects (and doesn't)</h2>
+
+    <div class="blind-spots">
+      <div class="blind-box blind-detected">
+        <div class="blind-label">Detected reliably</div>
+        <ul>
+          <li>Auth/access control weakening</li>
+          <li>JWT required → optional → removed</li>
+          <li>Explicit token removal language</li>
+        </ul>
+      </div>
+      <div class="blind-box blind-missed">
+        <div class="blind-label">Blind spots</div>
+        <ul>
+          <li>Privilege escalation gradients (read → write → admin)</li>
+          <li>Data retention policy erosion</li>
+          <li>Any attack without auth/token language</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>The blind spots are the next calibration target. Pattern families for privilege escalation and data retention are the immediate roadmap item before restoring <code>TAU_DIV_RB</code> from 0.85 to its intended 0.60.</p>
+  </div>
+
+  <!-- Section 7 -->
+  <div class="section">
+    <h2>7 — Attack Surface</h2>
+    <p>The dual-signal architecture introduces new attack surface. An adversary aware of the governor could attempt to manipulate Signal B to return STABLE on adversarial sequences. Practical vectors:</p>
+    <ul style="padding-left:1.2rem; margin-bottom:1rem;">
+      <li style="margin-bottom:0.5rem;"><strong>Prompt shaping</strong> — crafting transition text that appears coherent to an LLM while executing semantic drift</li>
+      <li style="margin-bottom:0.5rem;"><strong>Coherence spoofing</strong> — structured technical language that reads as logically consistent regardless of content direction</li>
+      <li style="margin-bottom:0.5rem;"><strong>Delayed drift masking</strong> — early turns establish strong coherence that persists in window accumulation while later turns execute the actual drift</li>
+    </ul>
+    <p>Streak and window size requirements provide partial resistance. Formally characterizing governor resistance to adversarial Signal B manipulation is open work.</p>
+  </div>
+
+  <!-- Section 8 -->
+  <div class="section">
+    <h2>8 — Generalization</h2>
+    <p>The pattern applies to any alert system where a fast cheap signal drives alert generation, a slow expensive signal provides semantic validation, disagreement between them is measurable, and irreversible actions should be gated on temporal consistency of evidence.</p>
+    <p>Security alerting pipelines, anomaly detection systems, and autonomous agent control loops all exhibit this structure. Sensitivity and precision are not fundamentally in tension if the system can delay irreversible actions until the slower signal has accumulated sufficient evidence. The geometric detector remains maximally sensitive. The governor provides the precision layer without modifying the detector itself.</p>
+  </div>
+
+  <!-- Section 9 -->
+  <div class="section">
+    <h2>9 — Open Work</h2>
+    <ul style="padding-left:1.2rem;">
+      <li style="margin-bottom:0.5rem;">Tighten weakening patterns to reduce 18.5% false boost rate</li>
+      <li style="margin-bottom:0.5rem;">Add data retention and privilege escalation pattern families</li>
+      <li style="margin-bottom:0.5rem;">Restore <code>TAU_DIV_RB</code> to 0.60 once patterns are tightened</li>
+      <li style="margin-bottom:0.5rem;">Formally characterize governor resistance to adversarial Signal B manipulation</li>
+      <li style="margin-bottom:0.5rem;">Investigate network_audit anchor rollback as separate finding</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer>
+  <div>gnomeman4201 // 2026 // <a href="https://github.com/GnomeMan4201/drift_orchestrator">drift_orchestrator</a></div>
+  <div>Companion: <a href="https://dev.to/gnomeman4201">Semantic Gradient Evasion (SGE)</a></div>
+</footer>
+
+</body>
+</html>
