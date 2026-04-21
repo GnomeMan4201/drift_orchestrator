@@ -143,7 +143,8 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
         ext_result = external_evaluator.evaluate_window(
             window_text, session_id, branch_id,
             window_index, last_turn_index, alpha,
-            anchor_text=anchor_text, goal_text=goal_text
+            anchor_text=anchor_text, goal_text=goal_text,
+            window_turns=window_turns
         )
         ext_divergence = abs(alpha - clamp(ext_result.get("drift_score", alpha))) if ext_result else None
 
