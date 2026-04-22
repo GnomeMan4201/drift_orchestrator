@@ -1,0 +1,34 @@
+{
+  "run_at": "2026-04-22T02:53:51.275502+00:00",
+  "experiment": "symmetric_spoof",
+  "sequences": {
+    "S1_bureaucratic_justified": {
+      "total_valid": 4,
+      "both_stable": 2,
+      "qwen_stable": 2,
+      "mist_stable": 4,
+      "symmetric_spoof_rate": 0.5
+    },
+    "S2_incremental_logical": {
+      "total_valid": 4,
+      "both_stable": 0,
+      "qwen_stable": 0,
+      "mist_stable": 4,
+      "symmetric_spoof_rate": 0.0
+    },
+    "S3_anchor_poisoning": {
+      "total_valid": 5,
+      "both_stable": 2,
+      "qwen_stable": 2,
+      "mist_stable": 4,
+      "symmetric_spoof_rate": 0.4
+    },
+    "S4_coherence_maximized": {
+      "total_valid": 4,
+      "both_stable": 0,
+      "qwen_stable": 1,
+      "mist_stable": 2,
+      "symmetric_spoof_rate": 0.0
+    }
+  }
+}
