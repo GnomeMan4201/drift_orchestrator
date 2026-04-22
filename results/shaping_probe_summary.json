@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-04-22T01:10:23.006105+00:00",
+  "run_at": "2026-04-22T15:15:35.870785+00:00",
   "experiment": "adversarial_shaping",
   "sequences": {
     "baseline": {
@@ -13,22 +13,22 @@
       "total_valid": 4,
       "qwen_degraded": 4,
       "mist_degraded": 0,
-      "spoof_success": 3,
-      "spoof_rate": 0.75
+      "spoof_success": 4,
+      "spoof_rate": 1.0
     },
     "strategy_2_passive": {
+      "total_valid": 3,
+      "qwen_degraded": 2,
+      "mist_degraded": 0,
+      "spoof_success": 1,
+      "spoof_rate": 0.3333
+    },
+    "strategy_3_justified": {
       "total_valid": 4,
       "qwen_degraded": 3,
       "mist_degraded": 0,
       "spoof_success": 3,
       "spoof_rate": 0.75
-    },
-    "strategy_3_justified": {
-      "total_valid": 4,
-      "qwen_degraded": 3,
-      "mist_degraded": 2,
-      "spoof_success": 2,
-      "spoof_rate": 0.5
     }
   }
 }

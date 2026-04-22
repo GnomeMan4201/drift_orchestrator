@@ -1,0 +1,164 @@
+{
+  "run_ts": "20260422_084001",
+  "iterations": 3,
+  "probes": [
+    "coupled_dual_system_probe.py",
+    "control_expansion_probe.py",
+    "adversarial_shaping_probe.py",
+    "symmetric_spoof_probe.py",
+    "second_order_injection_phase1.py",
+    "second_order_injection_phase2.py",
+    "mitigation_probe.py",
+    "divergence_threshold_calibration.py"
+  ],
+  "results": [
+    {
+      "script": "coupled_dual_system_probe.py",
+      "iteration": 1,
+      "status": "ok",
+      "elapsed": 1735.3
+    },
+    {
+      "script": "control_expansion_probe.py",
+      "iteration": 1,
+      "status": "ok",
+      "elapsed": 1841.1
+    },
+    {
+      "script": "adversarial_shaping_probe.py",
+      "iteration": 1,
+      "status": "ok",
+      "elapsed": 1114.5
+    },
+    {
+      "script": "symmetric_spoof_probe.py",
+      "iteration": 1,
+      "status": "ok",
+      "elapsed": 1114.3
+    },
+    {
+      "script": "second_order_injection_phase1.py",
+      "iteration": 1,
+      "status": "ok",
+      "elapsed": 946.3
+    },
+    {
+      "script": "second_order_injection_phase2.py",
+      "iteration": 1,
+      "status": "ok",
+      "elapsed": 1449.6
+    },
+    {
+      "script": "mitigation_probe.py",
+      "iteration": 1,
+      "status": "ok",
+      "elapsed": 1472.9
+    },
+    {
+      "script": "divergence_threshold_calibration.py",
+      "iteration": 1,
+      "status": "ok",
+      "elapsed": 0.1
+    },
+    {
+      "script": "coupled_dual_system_probe.py",
+      "iteration": 2,
+      "status": "ok",
+      "elapsed": 1671.7
+    },
+    {
+      "script": "control_expansion_probe.py",
+      "iteration": 2,
+      "status": "ok",
+      "elapsed": 1819.7
+    },
+    {
+      "script": "adversarial_shaping_probe.py",
+      "iteration": 2,
+      "status": "ok",
+      "elapsed": 1070.2
+    },
+    {
+      "script": "symmetric_spoof_probe.py",
+      "iteration": 2,
+      "status": "ok",
+      "elapsed": 1112.0
+    },
+    {
+      "script": "second_order_injection_phase1.py",
+      "iteration": 2,
+      "status": "ok",
+      "elapsed": 997.7
+    },
+    {
+      "script": "second_order_injection_phase2.py",
+      "iteration": 2,
+      "status": "ok",
+      "elapsed": 1569.8
+    },
+    {
+      "script": "mitigation_probe.py",
+      "iteration": 2,
+      "status": "ok",
+      "elapsed": 1534.0
+    },
+    {
+      "script": "divergence_threshold_calibration.py",
+      "iteration": 2,
+      "status": "ok",
+      "elapsed": 0.1
+    },
+    {
+      "script": "coupled_dual_system_probe.py",
+      "iteration": 3,
+      "status": "ok",
+      "elapsed": 1713.0
+    },
+    {
+      "script": "control_expansion_probe.py",
+      "iteration": 3,
+      "status": "ok",
+      "elapsed": 1852.4
+    },
+    {
+      "script": "adversarial_shaping_probe.py",
+      "iteration": 3,
+      "status": "ok",
+      "elapsed": 1102.5
+    },
+    {
+      "script": "symmetric_spoof_probe.py",
+      "iteration": 3,
+      "status": "ok",
+      "elapsed": 1070.6
+    },
+    {
+      "script": "second_order_injection_phase1.py",
+      "iteration": 3,
+      "status": "ok",
+      "elapsed": 946.3
+    },
+    {
+      "script": "second_order_injection_phase2.py",
+      "iteration": 3,
+      "status": "ok",
+      "elapsed": 1430.6
+    },
+    {
+      "script": "mitigation_probe.py",
+      "iteration": 3,
+      "status": "ok",
+      "elapsed": 1483.5
+    },
+    {
+      "script": "divergence_threshold_calibration.py",
+      "iteration": 3,
+      "status": "ok",
+      "elapsed": 0.1
+    }
+  ],
+  "ok": 24,
+  "errors": 0,
+  "timeouts": 0,
+  "skipped": 0
+}

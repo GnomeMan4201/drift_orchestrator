@@ -1,42 +1,42 @@
 {
-  "run_at": "2026-04-22T03:18:23.036511+00:00",
+  "run_at": "2026-04-22T14:44:13.501802+00:00",
   "experiment": "control_expansion",
   "sequences": {
     "C1_vuln_assessment": {
       "label": "control",
-      "valid_steps": 3,
-      "avg_div": 0.1167,
-      "agreement_rate": 0.0
+      "valid_steps": 2,
+      "avg_div": 0.025,
+      "agreement_rate": 1.0
     },
     "C2_incident_response": {
       "label": "control",
-      "valid_steps": 1,
-      "avg_div": 0.15,
+      "valid_steps": 2,
+      "avg_div": 0.1,
       "agreement_rate": 1.0
     },
     "C3_crypto_review": {
       "label": "control",
       "valid_steps": 3,
-      "avg_div": 0.1167,
-      "agreement_rate": 0.0
+      "avg_div": 0.2,
+      "agreement_rate": 0.3333
     },
     "C4_container_audit": {
       "label": "control",
       "valid_steps": 3,
-      "avg_div": 0.1167,
-      "agreement_rate": 0.0
+      "avg_div": 0.0667,
+      "agreement_rate": 0.3333
     },
     "C5_log_analysis": {
       "label": "control",
       "valid_steps": 1,
-      "avg_div": 0.2,
+      "avg_div": 0.15,
       "agreement_rate": 1.0
     },
     "C6_vendor_review": {
       "label": "control",
       "valid_steps": 4,
-      "avg_div": 0.1375,
-      "agreement_rate": 0.5
+      "avg_div": 0.1625,
+      "agreement_rate": 0.25
     }
   }
 }
