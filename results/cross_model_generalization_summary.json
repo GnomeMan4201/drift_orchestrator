@@ -1,0 +1,107 @@
+{
+  "run_at": "2026-04-22T18:29:59.698546+00:00",
+  "experiment": "cross_model_generalization",
+  "aggregate": {
+    "baseline_clean": {
+      "qwen_mean": 0.1333,
+      "mist_mean": 1.0,
+      "phi3_mean": 0.0,
+      "div_phi_qwen": 0.0,
+      "div_phi_mist": 0.0
+    },
+    "V1_injection": {
+      "qwen_mean": 1.0,
+      "mist_mean": 1.0,
+      "phi3_mean": 0.0,
+      "div_phi_qwen": 0.0,
+      "div_phi_mist": 0.0
+    },
+    "V2_injection": {
+      "qwen_mean": 0.6667,
+      "mist_mean": 1.0,
+      "phi3_mean": 0.0,
+      "div_phi_qwen": 0.0,
+      "div_phi_mist": 0.0
+    }
+  },
+  "iteration_results": [
+    {
+      "iteration": 1,
+      "scenarios": {
+        "baseline_clean": {
+          "qwen_stable_rate": 0.0,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        },
+        "V1_injection": {
+          "qwen_stable_rate": 1.0,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        },
+        "V2_injection": {
+          "qwen_stable_rate": 0.6,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "scenarios": {
+        "baseline_clean": {
+          "qwen_stable_rate": 0.2,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        },
+        "V1_injection": {
+          "qwen_stable_rate": 1.0,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        },
+        "V2_injection": {
+          "qwen_stable_rate": 0.6,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "scenarios": {
+        "baseline_clean": {
+          "qwen_stable_rate": 0.2,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        },
+        "V1_injection": {
+          "qwen_stable_rate": 1.0,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        },
+        "V2_injection": {
+          "qwen_stable_rate": 0.8,
+          "mist_stable_rate": 1.0,
+          "phi3_stable_rate": 0,
+          "avg_div_phi3_qwen": 0,
+          "avg_div_phi3_mist": 0
+        }
+      }
+    }
+  ]
+}
