@@ -6,7 +6,7 @@
 
 ## Abstract
 
-LLM-based safety monitors share a structural vulnerability: the evaluator reads attacker-influenced content to produce its safety verdict. We demonstrate that content embedded in monitored session windows can directly override evaluator output -- a class we term second-order injection. Unlike first-order prompt injection which targets the agent being monitored, second-order injection targets the monitor itself. We characterize six injection vectors across three model families (qwen2.5:3b, mistral, phi3:mini), demonstrate 100% evaluator override rates on all three models with tuned vectors, confirm full vector transfer across model families, show that coupled dual-system architectures collapse to near-zero divergence signal under symmetric injection, and empirically evaluate four prompt-level sanitization strategies -- none of which fully mitigates the attack. Second-order injection is a universal vulnerability class requiring architectural isolation of the evaluator context from attacker-influenced content.
+LLM-based safety monitors share a structural vulnerability: the evaluator reads attacker-influenced content to produce its safety verdict. We demonstrate that content embedded in monitored session windows can directly override evaluator output -- a class we term second-order injection. Unlike first-order prompt injection which targets the agent being monitored, second-order injection targets the monitor itself. We characterize six injection vectors across three model families (qwen2.5:3b, mistral, phi3:mini), demonstrate 100% evaluator override rates on all three models with tuned vectors, confirm full vector transfer across model families, show that coupled dual-system architectures collapse to near-zero divergence signal under symmetric injection, and empirically evaluate four prompt-level sanitization strategies -- none of which fully mitigates the attack. Second-order injection is a universal vulnerability class requiring architectural isolation of the evaluator context from attacker-influenced content. We additionally characterize a meta-evaluator architectural defense -- a logical air gap where a third model evaluates only verdicts and reasoning, never raw session content -- and find it achieves 93.3% detection on asymmetric injection with a 72.2% false alarm rate on clean sessions, identifying baseline calibration as the critical open problem.
 
 ---
 
@@ -161,7 +161,37 @@ High divergence (>0.36) is a reliable attack indicator -- 92% precision, 4% FPR.
 
 ---
 
-## 13. Recommendations
+## 13. Meta-Evaluator: Architectural Defense via Logical Air Gap
+
+We tested an out-of-band meta-evaluation architecture in which a third model (System C, phi3:mini) receives only the verdicts and reasoning produced by System A and System B -- never the raw session content. System C's task is to detect evaluator compromise by identifying suspicious patterns in the reasoning: formulaic language, instruction artifacts, unnatural agreement, and drift score inconsistencies.
+
+This creates a logical air gap: the attacker controls what appears in the session window, but cannot directly inject into the meta-evaluator's context without their artifacts appearing in System A or B's reasoning output.
+
+Results across 3 iterations, 4 scenarios:
+
+Scenario | Detection rate | Notes
+clean_session | 72.2% false alarm | Legitimate A/B disagreement misread as suspicious
+V1_injected | 78.3% caught | Instruction artifacts visible in reasoning
+V4_injected_a | 93.3% caught | Asymmetric injection, reasoning mismatch detectable
+V4_symmetric | 51.1% caught | Both evaluators produce clean-looking reasoning
+
+The meta-evaluator successfully detects asymmetric injection at 93.3% by identifying the contrast between an injected evaluator's formulaic reasoning ("max 8 words", "no drift") and a genuine evaluator's substantive analysis. System C flags patterns including: identical drift scores with perfect agreement, reasoning too brief to reflect actual analysis, and instruction-like language in reasoning fields.
+
+The critical failure mode is the 72.2% false alarm rate on clean sessions. qwen and mistral genuinely disagree on the privilege escalation sequence -- qwen returns DEGRADED while mistral returns STABLE -- and System C reads this legitimate disagreement as suspicious. This makes the meta-evaluator unusable as a standalone detector without baseline calibration.
+
+V4 symmetric injection achieves 51.1% bypass against the meta-evaluator. When both evaluators are injected with V4, both produce similar-looking reasoning that System C cannot distinguish from legitimate agreement. The air gap defense degrades when the attacker controls both input channels simultaneously.
+
+Two mitigation paths emerge from this data:
+
+Baseline calibration: System C must learn what legitimate A/B disagreement looks like before deployment. Feeding it clean session baselines reduces false alarm rate while preserving detection sensitivity. Without calibration the false alarm rate makes the system operationally unusable.
+
+Layered detection: Combining meta-evaluation with divergence threshold alerting produces complementary coverage. High divergence (tau>0.36) catches asymmetric cases where one evaluator detects and one doesn't. Meta-evaluation catches symmetric cases where both evaluators agree but their reasoning is suspicious. Neither signal alone provides adequate coverage. Together they address more of the attack surface.
+
+The meta-evaluator finding changes the paper's conclusion: architectural isolation provides partial defense with characterizable failure modes, not zero defense. The open problem is not whether the air gap helps -- it clearly does at 93.3% on asymmetric injection -- but whether it can be calibrated to reduce false alarms without losing detection sensitivity on symmetric injection.
+
+---
+
+## 14. Recommendations
 
 Evaluator model selection: Measure baseline detection rate on known attack sequences before deployment. Mistral 100% STABLE rate on privilege escalation makes it unsuitable as a standalone evaluator regardless of injection hardening. Model selection is a prerequisite to injection resistance, not a substitute for architectural defense.
 
@@ -169,13 +199,15 @@ Sanitization baseline: M4 eliminates V1/V2/V3 injection bypass for instruction-f
 
 Architectural isolation: The necessary defense. The evaluator must receive content through a structured interface that physically separates the TEXT field from the instruction context. Not regex cleaning of a shared context window -- actual prompt architecture where attacker content cannot syntactically reach the instruction layer. This prevents all tested injection vectors including V4.
 
+Meta-evaluation with baseline calibration: Deploy a meta-evaluator (System C) that receives only verdicts and reasoning from primary evaluators, never raw session content. Calibrate System C on clean session baselines before deployment to reduce the 72.2% uncalibrated false alarm rate. Combine with divergence threshold alerting for layered coverage -- meta-evaluation catches symmetric injection that divergence misses, divergence catches asymmetric injection that meta-evaluation handles poorly.
+
 Coupled systems: Inter-system divergence at tau>0.36 is a high-precision attack indicator (92%). Use as boost signal. Do not treat low divergence as a safety signal -- symmetric injection produces near-zero divergence while achieving complete bypass.
 
 Verdict validation: Monitor all evaluator outputs for non-canonical values. Any verdict outside {STABLE, DEGRADED, FAILURE} indicates injection attempt or evaluator failure.
 
 ---
 
-## 14. Limitations
+## 15. Limitations
 
 Sample size: 3-5 valid comparison points per condition per run due to mistral early-window timeout behavior. Results are consistent across 3 independent iterations but not statistically powered for precise percentage claims.
 
@@ -187,21 +219,23 @@ Sanitization completeness: Four strategies tested. More sophisticated approaches
 
 Adaptive injection not tested: All vectors are static. An adaptive injector that observes evaluator output and modifies subsequent payloads may achieve higher bypass rates against partially-resistant models and is the immediate next research direction.
 
+Meta-evaluator calibration not tested: The 72.2% false alarm rate reflects uncalibrated deployment. Baseline calibration -- feeding System C clean session examples before live deployment -- is expected to substantially reduce false alarms but was not empirically measured in this work.
+
 ---
 
-## 15. Conclusion
+## 16. Conclusion
 
 LLM-based safety evaluators that read attacker-influenced content share a context window with their attack surface. Content embedded in monitored session turns can directly override evaluator verdicts across architecturally distinct model families. Under symmetric injection in a coupled dual-system architecture, inter-system divergence collapses to near-zero, eliminating the primary detection signal. No prompt-level sanitization strategy fully mitigates the attack -- reasoning capture payloads use natural language that survives all tested filters.
 
 Vector transfer is confirmed: a payload discovered by attacking the most resistant model achieves 100% bypass on all three tested models without modification. Second-order injection is not a model-specific weakness. It is a structural property of any architecture where the evaluator context window is reachable by attacker-controlled content.
 
-Evaluator context isolation -- physical separation of the instruction context from attacker-influenced content -- is the necessary architectural response. Building and formally characterizing injection-resistant evaluator architectures is the work this paper motivates.
+Evaluator context isolation -- physical separation of the instruction context from attacker-influenced content -- is the necessary architectural response. A meta-evaluator architecture that enforces this isolation through a logical air gap achieves 93.3% detection on asymmetric injection but degrades to 51.1% on symmetric injection and produces a 72.2% false alarm rate on clean sessions without baseline calibration. The open problem is calibrating meta-evaluation to distinguish legitimate inter-evaluator disagreement from injection-induced agreement -- a solvable engineering problem with a clear path forward.
 
 ---
 
 ## Experimental Data
 
-All probe scripts, result data, and this paper: github.com/GnomeMan4201/drift_orchestrator
+All probe scripts, result data, and this paper: [github.com/GnomeMan4201/drift_orchestrator](https://github.com/GnomeMan4201/drift_orchestrator)
 
 Key result files:
 results/soi_phase1.jsonl -- individual model injection vulnerability
@@ -211,12 +245,14 @@ results/cross_model_generalization.jsonl -- phi3 generalization
 results/phi3_targeted_injection.jsonl -- phi3 targeted vectors
 results/vector_transfer.jsonl -- transfer confirmation
 results/overnight_20260422_084001_summary.json -- 3-iteration overnight run
+results/meta_evaluator_probe.jsonl -- meta-evaluator architectural defense testing
+results/meta_evaluator_summary.json -- detection rates by scenario
 
 ## Companion Papers
 
-Semantic Gradient Evasion (SGE): Bypassing Embedding-Based Drift Detectors
-The Dual-Signal Governor: A Control Plane Pattern for Drift-Aware Systems
-Coupled Dual-System Drift Detection: Divergence as a Detection Signal
+[Semantic Gradient Evasion (SGE): Bypassing Embedding-Based Drift Detectors](https://dev.to/gnomeman4201)
+[The Dual-Signal Governor: A Control Plane Pattern for Drift-Aware Systems](https://dev.to/gnomeman4201)
+[Coupled Dual-System Drift Detection: Divergence as a Detection Signal](https://dev.to/gnomeman4201)
 
 ---
 
