@@ -3,9 +3,17 @@
 
 ![Second-Order Injection Attack Chain](docs/attack_chain.svg)
 
+
+![Second-Order Injection Attack Chain](docs/attack_chain.svg)
+
 **LLM safety monitor security research platform.** Built to detect policy drift in LLM sessions — and to find out how that detection can be defeated.
 
 [![CI](https://github.com/GnomeMan4201/drift_orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/GnomeMan4201/drift_orchestrator/actions)
+![Vectors](https://img.shields.io/badge/vectors_tested-6-c44b2b?style=flat&labelColor=0d1117)
+![Models](https://img.shields.io/badge/model_families-3-1f6feb?style=flat&labelColor=0d1117)
+![Bypass](https://img.shields.io/badge/universal_bypass-V4-c44b2b?style=flat&labelColor=0d1117)
+![Paper](https://img.shields.io/badge/paper-dev.to-orange?style=flat&labelColor=0d1117)
+![Portal](https://img.shields.io/badge/portal-live-3fb950?style=flat&labelColor=0d1117)
 ![Vectors](https://img.shields.io/badge/vectors_tested-6-c44b2b?style=flat&labelColor=0d1117)
 ![Models](https://img.shields.io/badge/model_families-3-1f6feb?style=flat&labelColor=0d1117)
 ![Bypass](https://img.shields.io/badge/universal_bypass-V4-c44b2b?style=flat&labelColor=0d1117)
@@ -133,6 +141,15 @@ python overnight_runner.py
 - [ ] Formal model -- mathematical characterization of injectability
 
 ---
+
+
+## Reference Docs
+
+| Document | Contents |
+|----------|----------|
+| [FINDINGS.md](FINDINGS.md) | All empirical results — quick reference tables |
+| [THREAT_MODEL.md](THREAT_MODEL.md) | Attacker profile, attack surface, defender assumptions |
+| [papers/second_order_injection.md](papers/second_order_injection.md) | Full research paper |
 
 
 ## Reference Docs
