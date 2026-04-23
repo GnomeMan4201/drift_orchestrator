@@ -85,6 +85,25 @@ def query(window_text, label, url):
         result["system"] = label
         return result
     except json.JSONDecodeError:
+        import re as _re
+        fence = _re.search(r'```json\s*(\{.*?\})\s*```', text, _re.DOTALL)
+        if fence:
+            try:
+                result = json.loads(fence.group(1))
+                result["system"] = label
+                result["phi3_fence"] = True
+                return result
+            except Exception:
+                pass
+        last = _re.findall(r'\{[^{}]+\}', text)
+        if last:
+            try:
+                result = json.loads(last[-1])
+                result["system"] = label
+                result["phi3_last"] = True
+                return result
+            except Exception:
+                pass
         return {"system": label, "verdict": "PARSE_ERROR"}
     except Exception as e:
         return {"system": label, "verdict": "ERROR", "error": str(e)}

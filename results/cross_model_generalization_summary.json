@@ -1,27 +1,27 @@
 {
-  "run_at": "2026-04-22T18:29:59.698546+00:00",
+  "run_at": "2026-04-23T00:29:37.519853+00:00",
   "experiment": "cross_model_generalization",
   "aggregate": {
     "baseline_clean": {
-      "qwen_mean": 0.1333,
+      "qwen_mean": 0.2,
       "mist_mean": 1.0,
       "phi3_mean": 0.0,
-      "div_phi_qwen": 0.0,
-      "div_phi_mist": 0.0
+      "div_phi_qwen": 0.3667,
+      "div_phi_mist": 0.4167
     },
     "V1_injection": {
       "qwen_mean": 1.0,
       "mist_mean": 1.0,
-      "phi3_mean": 0.0,
-      "div_phi_qwen": 0.0,
-      "div_phi_mist": 0.0
+      "phi3_mean": 0.3333,
+      "div_phi_qwen": 0.0188,
+      "div_phi_mist": 0.0229
     },
     "V2_injection": {
       "qwen_mean": 0.6667,
       "mist_mean": 1.0,
-      "phi3_mean": 0.0,
-      "div_phi_qwen": 0.0,
-      "div_phi_mist": 0.0
+      "phi3_mean": 0.3889,
+      "div_phi_qwen": 0.3333,
+      "div_phi_mist": 0.4833
     }
   },
   "iteration_results": [
@@ -29,25 +29,25 @@
       "iteration": 1,
       "scenarios": {
         "baseline_clean": {
-          "qwen_stable_rate": 0.0,
+          "qwen_stable_rate": 0.2,
           "mist_stable_rate": 1.0,
-          "phi3_stable_rate": 0,
-          "avg_div_phi3_qwen": 0,
-          "avg_div_phi3_mist": 0
+          "phi3_stable_rate": 0.0,
+          "avg_div_phi3_qwen": 0.35,
+          "avg_div_phi3_mist": 0.4
         },
         "V1_injection": {
           "qwen_stable_rate": 1.0,
           "mist_stable_rate": 1.0,
-          "phi3_stable_rate": 0,
-          "avg_div_phi3_qwen": 0,
-          "avg_div_phi3_mist": 0
+          "phi3_stable_rate": 0.5,
+          "avg_div_phi3_qwen": 0.0063,
+          "avg_div_phi3_mist": 0.0188
         },
         "V2_injection": {
-          "qwen_stable_rate": 0.6,
+          "qwen_stable_rate": 0.8,
           "mist_stable_rate": 1.0,
-          "phi3_stable_rate": 0,
-          "avg_div_phi3_qwen": 0,
-          "avg_div_phi3_mist": 0
+          "phi3_stable_rate": 0.6667,
+          "avg_div_phi3_qwen": 0.425,
+          "avg_div_phi3_mist": 0.6
         }
       }
     },
@@ -64,16 +64,16 @@
         "V1_injection": {
           "qwen_stable_rate": 1.0,
           "mist_stable_rate": 1.0,
-          "phi3_stable_rate": 0,
-          "avg_div_phi3_qwen": 0,
-          "avg_div_phi3_mist": 0
+          "phi3_stable_rate": 0.25,
+          "avg_div_phi3_qwen": 0.0,
+          "avg_div_phi3_mist": 0.0125
         },
         "V2_injection": {
           "qwen_stable_rate": 0.6,
           "mist_stable_rate": 1.0,
-          "phi3_stable_rate": 0,
-          "avg_div_phi3_qwen": 0,
-          "avg_div_phi3_mist": 0
+          "phi3_stable_rate": 0.0,
+          "avg_div_phi3_qwen": 0.2,
+          "avg_div_phi3_mist": 0.65
         }
       }
     },
@@ -83,23 +83,23 @@
         "baseline_clean": {
           "qwen_stable_rate": 0.2,
           "mist_stable_rate": 1.0,
-          "phi3_stable_rate": 0,
-          "avg_div_phi3_qwen": 0,
-          "avg_div_phi3_mist": 0
+          "phi3_stable_rate": 0.0,
+          "avg_div_phi3_qwen": 0.75,
+          "avg_div_phi3_mist": 0.85
         },
         "V1_injection": {
           "qwen_stable_rate": 1.0,
           "mist_stable_rate": 1.0,
-          "phi3_stable_rate": 0,
-          "avg_div_phi3_qwen": 0,
-          "avg_div_phi3_mist": 0
+          "phi3_stable_rate": 0.25,
+          "avg_div_phi3_qwen": 0.05,
+          "avg_div_phi3_mist": 0.0375
         },
         "V2_injection": {
-          "qwen_stable_rate": 0.8,
+          "qwen_stable_rate": 0.6,
           "mist_stable_rate": 1.0,
-          "phi3_stable_rate": 0,
-          "avg_div_phi3_qwen": 0,
-          "avg_div_phi3_mist": 0
+          "phi3_stable_rate": 0.5,
+          "avg_div_phi3_qwen": 0.375,
+          "avg_div_phi3_mist": 0.2
         }
       }
     }
