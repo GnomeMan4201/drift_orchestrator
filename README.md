@@ -147,18 +147,24 @@ python overnight_runner.py
 
 | Document | Contents |
 |----------|----------|
-| [FINDINGS.md](FINDINGS.md) | All empirical results — quick reference tables |
+| [FINDINGS.md](FINDINGS.md) | All empirical results — every number, every model, every vector |
 | [THREAT_MODEL.md](THREAT_MODEL.md) | Attacker profile, attack surface, defender assumptions |
-| [papers/second_order_injection.md](papers/second_order_injection.md) | Full research paper |
+| [REPLICATE.md](REPLICATE.md) | Exact reproduction instructions — go from zero to running experiments |
+| [RESEARCH_LOG.md](RESEARCH_LOG.md) | Chronological record — every run, every finding, every dead end |
+| [CHANGELOG.md](CHANGELOG.md) | Threat intelligence feed format — findings land as releases |
+| [papers/second_order_injection.md](papers/second_order_injection.md) | Full research paper — 16 sections |
 
 
 ## Reference Docs
 
 | Document | Contents |
 |----------|----------|
-| [FINDINGS.md](FINDINGS.md) | All empirical results — quick reference tables |
+| [FINDINGS.md](FINDINGS.md) | All empirical results — every number, every model, every vector |
 | [THREAT_MODEL.md](THREAT_MODEL.md) | Attacker profile, attack surface, defender assumptions |
-| [papers/second_order_injection.md](papers/second_order_injection.md) | Full research paper |
+| [REPLICATE.md](REPLICATE.md) | Exact reproduction instructions — go from zero to running experiments |
+| [RESEARCH_LOG.md](RESEARCH_LOG.md) | Chronological record — every run, every finding, every dead end |
+| [CHANGELOG.md](CHANGELOG.md) | Threat intelligence feed format — findings land as releases |
+| [papers/second_order_injection.md](papers/second_order_injection.md) | Full research paper — 16 sections |
 
 ## Related
 
