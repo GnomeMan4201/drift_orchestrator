@@ -10,6 +10,16 @@ LLM-based safety monitors share a structural vulnerability: the evaluator reads 
 
 ---
 
+## Interactive Demos
+
+| Demo | Link |
+|------|------|
+| Research Portal | [gnomeman4201.github.io/drift_orchestrator](https://gnomeman4201.github.io/drift_orchestrator/) |
+| Dual Signal Governor | [Live Architecture Visualization](https://gnomeman4201.github.io/drift_orchestrator/governor.html) |
+
+---
+
+
 ## 1. Background and Motivation
 
 drift_orchestrator is an open-source LLM session monitor built to detect policy drift through a multi-signal architecture. Signal A measures geometric displacement in embedding space across session turns. Signal B is an LLM coherence evaluator that assesses accumulated window text for semantic continuity and policy adherence. The dual-signal governor arbitrates between A and B to reduce false positives.
