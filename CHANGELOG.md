@@ -17,6 +17,21 @@ Threat intelligence feed format. Each release documents new findings, confirmed 
 
 ---
 
+## [0.13.1] — 2026-04-23 (Evening)
+
+### Findings
+- FINDING: Baseline calibration reduces meta-evaluator false alarm rate 72.2% → 33.3%
+- FINDING: Calibration simultaneously collapses V4 detection 93.3% → 33.3% — negative result
+- FINDING: V4 injection signature is irreducibly ambiguous with legitimate inter-evaluator disagreement
+- FINDING: Prompt-level calibration cannot solve the meta-evaluator detection problem
+
+### Probes Ready
+- PROBE: verdict_validator_probe.py — non-canonical output IDS
+- PROBE: semantic_jitter_probe.py — persona differentiation defense
+- PROBE: adaptive_injection_probe.py — feedback loop attack
+
+---
+
 ## [0.13.0] — 2026-04-23
 
 ### Findings

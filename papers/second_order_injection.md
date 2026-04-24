@@ -6,7 +6,7 @@
 
 ## Abstract
 
-LLM-based safety monitors share a structural vulnerability: the evaluator reads attacker-influenced content to produce its safety verdict. We demonstrate that content embedded in monitored session windows can directly override evaluator output -- a class we term second-order injection. Unlike first-order prompt injection which targets the agent being monitored, second-order injection targets the monitor itself. We characterize six injection vectors across three model families (qwen2.5:3b, mistral, phi3:mini), demonstrate 100% evaluator override rates on all three models with tuned vectors, confirm full vector transfer across model families, show that coupled dual-system architectures collapse to near-zero divergence signal under symmetric injection, and empirically evaluate four prompt-level sanitization strategies -- none of which fully mitigates the attack. Second-order injection is a universal vulnerability class requiring architectural isolation of the evaluator context from attacker-influenced content. We additionally characterize a meta-evaluator architectural defense -- a logical air gap where a third model evaluates only verdicts and reasoning, never raw session content -- and find it achieves 93.3% detection on asymmetric injection with a 72.2% false alarm rate on clean sessions, identifying baseline calibration as the critical open problem.
+LLM-based safety monitors share a structural vulnerability: the evaluator reads attacker-influenced content to produce its safety verdict. We demonstrate that content embedded in monitored session windows can directly override evaluator output -- a class we term second-order injection. Unlike first-order prompt injection which targets the agent being monitored, second-order injection targets the monitor itself. We characterize six injection vectors across three model families (qwen2.5:3b, mistral, phi3:mini), demonstrate 100% evaluator override rates on all three models with tuned vectors, confirm full vector transfer across model families, show that coupled dual-system architectures collapse to near-zero divergence signal under symmetric injection, and empirically evaluate four prompt-level sanitization strategies -- none of which fully mitigates the attack. Second-order injection is a universal vulnerability class requiring architectural isolation of the evaluator context from attacker-influenced content. We additionally characterize a meta-evaluator architectural defense -- a logical air gap where a third model evaluates only verdicts and reasoning, never raw session content -- and find it achieves 93.3% detection on asymmetric injection with a 72.2% false alarm rate on clean sessions, identifying baseline calibration as a negative result: calibration reduces false alarms from 72.2% to 33.3% but simultaneously collapses detection from 93.3% to 33.3%, revealing an irreducible ambiguity between legitimate inter-evaluator disagreement and V4 injection artifacts.
 
 ---
 
@@ -201,6 +201,34 @@ The meta-evaluator finding changes the paper's conclusion: architectural isolati
 
 ---
 
+## 13.1 Meta-Evaluator Baseline Calibration: A Negative Result
+
+We tested whether providing System C with five clean baseline examples before evaluation — teaching it what legitimate A/B disagreement looks like — would reduce the 72.2% false alarm rate while preserving detection sensitivity.
+
+Results across 3 iterations:
+
+Scenario | Uncalibrated | Calibrated | Delta
+clean_session FA | 72.2% | 33.3% | -38.9%
+V1_injected | 78.3% caught | 36.7% caught | -41.6%
+V4_injected_a | 93.3% caught | 33.3% caught | -60.0%
+V4_symmetric | 51.1% caught | 30.0% caught | -21.1%
+
+Calibration reduced false alarms from 72.2% to 33.3% — a meaningful improvement. However, detection collapsed simultaneously across every attack scenario. V4 asymmetric detection dropped from 93.3% to 33.3%, a 60 percentage point loss.
+
+The mechanism: the calibration examples taught System C that legitimate A/B disagreement is CLEAN. V4 asymmetric injection causes qwen to produce formulaic reasoning ("max 8 words", "no drift") while mistral, seeing clean content, produces substantive analysis. This pattern — one evaluator terse, one detailed, both returning STABLE — is indistinguishable from the calibration examples of legitimate disagreement. The calibration taught System C to accept exactly the pattern V4 creates.
+
+This is a fundamental unsolvability result for this calibration approach. The meta-evaluator faces an irreducible ambiguity: the signature of V4 asymmetric injection is identical to the signature of legitimate inter-evaluator disagreement when one evaluator is more verbose than the other. Calibrating on clean examples resolves this ambiguity in the wrong direction.
+
+Two alternative approaches remain untested:
+
+Adversarial calibration: provide System C with attack examples rather than clean examples, teaching it what injection looks like rather than what clean looks like. Risk: overfits to known vectors, fails on novel payloads.
+
+Structural separation: rather than calibrating System C's judgment, physically separate its input from the reasoning text. Provide only verdict labels and numeric scores, no reasoning strings. This removes the channel through which V4 reasoning artifacts leak into the meta-evaluation context. A genuinely different architecture rather than a prompt-level fix.
+
+The calibration finding strengthens the paper's conclusion: second-order injection is not merely a detection problem solvable by prompt engineering. It is an architectural problem requiring structural isolation of evaluator contexts.
+
+---
+
 ## 14. Recommendations
 
 Evaluator model selection: Measure baseline detection rate on known attack sequences before deployment. Mistral 100% STABLE rate on privilege escalation makes it unsuitable as a standalone evaluator regardless of injection hardening. Model selection is a prerequisite to injection resistance, not a substitute for architectural defense.
@@ -257,6 +285,8 @@ results/vector_transfer.jsonl -- transfer confirmation
 results/overnight_20260422_084001_summary.json -- 3-iteration overnight run
 results/meta_evaluator_probe.jsonl -- meta-evaluator architectural defense testing
 results/meta_evaluator_summary.json -- detection rates by scenario
+results/meta_evaluator_calibrated.jsonl -- baseline calibration probe
+results/meta_evaluator_calibrated_summary.json -- calibration vs uncalibrated comparison
 
 ## Companion Papers
 
