@@ -17,6 +17,22 @@ Threat intelligence feed format. Each release documents new findings, confirmed 
 
 ---
 
+## [0.14.0] — 2026-04-23 (Evening)
+
+### Findings
+- FINDING: Adaptive injection achieves only 19.4% bypass vs calibrated meta-evaluator
+- FINDING: Escalation pattern is itself a detection signal — meta-evaluator catches clean fallback
+- FINDING: Meta-evaluator most effective against sophisticated adaptive attackers
+- FINDING: Optimal attacker strategy is static V4, not adaptive escalation
+- FINDING: Adaptive behavior is a fingerprint — more visible than static injection
+
+### Implication
+- DEFENSE: Deploy meta-evaluator and accept false alarm rate
+- DEFENSE: Adaptive attackers who escalate become more detectable, not less
+- ATTACK: Static V4 from turn 0 remains hardest to detect
+
+---
+
 ## [0.13.1] — 2026-04-23 (Evening)
 
 ### Findings

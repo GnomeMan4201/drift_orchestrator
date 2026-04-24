@@ -6,7 +6,7 @@
 
 ## Abstract
 
-LLM-based safety monitors share a structural vulnerability: the evaluator reads attacker-influenced content to produce its safety verdict. We demonstrate that content embedded in monitored session windows can directly override evaluator output -- a class we term second-order injection. Unlike first-order prompt injection which targets the agent being monitored, second-order injection targets the monitor itself. We characterize six injection vectors across three model families (qwen2.5:3b, mistral, phi3:mini), demonstrate 100% evaluator override rates on all three models with tuned vectors, confirm full vector transfer across model families, show that coupled dual-system architectures collapse to near-zero divergence signal under symmetric injection, and empirically evaluate four prompt-level sanitization strategies -- none of which fully mitigates the attack. Second-order injection is a universal vulnerability class requiring architectural isolation of the evaluator context from attacker-influenced content. We additionally characterize a meta-evaluator architectural defense -- a logical air gap where a third model evaluates only verdicts and reasoning, never raw session content -- and find it achieves 93.3% detection on asymmetric injection with a 72.2% false alarm rate on clean sessions, identifying baseline calibration as a negative result: calibration reduces false alarms from 72.2% to 33.3% but simultaneously collapses detection from 93.3% to 33.3%, revealing an irreducible ambiguity between legitimate inter-evaluator disagreement and V4 injection artifacts.
+LLM-based safety monitors share a structural vulnerability: the evaluator reads attacker-influenced content to produce its safety verdict. We demonstrate that content embedded in monitored session windows can directly override evaluator output -- a class we term second-order injection. Unlike first-order prompt injection which targets the agent being monitored, second-order injection targets the monitor itself. We characterize six injection vectors across three model families (qwen2.5:3b, mistral, phi3:mini), demonstrate 100% evaluator override rates on all three models with tuned vectors, confirm full vector transfer across model families, show that coupled dual-system architectures collapse to near-zero divergence signal under symmetric injection, and empirically evaluate four prompt-level sanitization strategies -- none of which fully mitigates the attack. Second-order injection is a universal vulnerability class requiring architectural isolation of the evaluator context from attacker-influenced content. We additionally characterize a meta-evaluator architectural defense -- a logical air gap where a third model evaluates only verdicts and reasoning, never raw session content -- and find it achieves 93.3% detection on asymmetric injection with a 72.2% false alarm rate on clean sessions, identifying baseline calibration as a negative result: calibration reduces false alarms from 72.2% to 33.3% but simultaneously collapses detection from 93.3% to 33.3%, revealing an irreducible ambiguity between legitimate inter-evaluator disagreement and V4 injection artifacts. We further demonstrate that adaptive injection -- where the attacker observes per-turn verdicts and escalates vector sophistication -- achieves only 19.4% bypass against the meta-evaluator, lower than static V4, because the escalation pattern itself becomes a detection signal.
 
 ---
 
@@ -271,6 +271,45 @@ Evaluator context isolation -- physical separation of the instruction context fr
 
 ---
 
+## 17. Adaptive Injection: The Escalation Pattern as Detection Signal
+
+All previous injection research used static vectors — the same payload on every session turn regardless of evaluator response. We tested adaptive injection: a feedback loop attack where the injector observes per-turn meta-evaluator verdicts and escalates vector sophistication in response.
+
+Adaptive strategy:
+- Turn 0: Deploy V1 (simplest). If bypass continues V1.
+- If detected: escalate to V4 (reasoning capture).
+- If V4 detected: escalate to V7 (V4+V6 combined).
+- If V7 detected: fall back to clean content to avoid detection.
+
+This simulates a real attacker who observes whether each turn succeeds and adjusts accordingly. The hypothesis: adaptive injection achieves higher bypass rates than static V4 by finding the right vector per turn.
+
+Results across 3 iterations against the calibrated meta-evaluator:
+
+Iteration | Bypass rate | Notes
+1 | 25.0% | V4 bypassed on step 2 (meta PARSE_ERROR), V7 caught
+2 | 0.0% | All vectors caught including clean fallback
+3 | 33.3% | Two steps skipped (mistral 502), V1 bypass on ERROR step
+
+Mean adaptive bypass rate: 19.4%
+
+The hypothesis was wrong. Adaptive injection achieves lower bypass rates than static V4 against the meta-evaluator, not higher.
+
+The mechanism: the escalation pattern is itself a detection signal. When an attacker deploys V1, gets caught, escalates to V4, gets caught, escalates to V7, gets caught, and falls back to clean — the meta-evaluator sees this sequence. The clean fallback was flagged COMPROMISED with 0.85 confidence in iteration 2. An attacker retreating to clean content after a sequence of detected injection attempts is still suspicious.
+
+The meta-evaluator's reasoning shows why: "Text is coherent but previous context suggests manipulation." System C does not evaluate each turn in isolation — it accumulates signal across the session. An adaptive attacker who modifies their payload is more visible, not less, because each escalation confirms the meta-evaluator's suspicion.
+
+The complete defense picture across all tested configurations:
+
+Attack type | No defense | Meta uncalibrated | Meta + adaptive attacker
+Static V4 | 100% bypass | 51.1% bypass | —
+Adaptive escalation | — | — | 80.6% caught (19.4% bypass)
+
+This is counterintuitive. The meta-evaluator is most effective against sophisticated adaptive attackers who escalate and retreat, and least effective against simple static injection that never triggers escalation detection. The implication for defenders: deploy the meta-evaluator and accept the false alarm rate. An attacker who notices they are being detected and adapts their strategy becomes more visible, not less.
+
+The implication for attackers: the optimal strategy against a meta-evaluator is not adaptive escalation but a single carefully chosen vector deployed consistently from turn 0. Static V4 with no observable pattern remains the hardest to detect. Adaptive behavior is a fingerprint.
+
+---
+
 ## Experimental Data
 
 All probe scripts, result data, and this paper: [github.com/GnomeMan4201/drift_orchestrator](https://github.com/GnomeMan4201/drift_orchestrator)
@@ -287,6 +326,8 @@ results/meta_evaluator_probe.jsonl -- meta-evaluator architectural defense testi
 results/meta_evaluator_summary.json -- detection rates by scenario
 results/meta_evaluator_calibrated.jsonl -- baseline calibration probe
 results/meta_evaluator_calibrated_summary.json -- calibration vs uncalibrated comparison
+results/adaptive_injection.jsonl -- adaptive injection feedback loop attack
+results/adaptive_injection_summary.json -- 19.4% bypass rate, escalation pattern detection
 
 ## Companion Papers
 
