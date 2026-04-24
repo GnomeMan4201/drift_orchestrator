@@ -1,0 +1,143 @@
+{
+  "run_at": "2026-04-24T00:06:57.157307+00:00",
+  "experiment": "meta_evaluator_calibrated",
+  "aggregate": {
+    "clean_session": {
+      "false_alarm_rate": 0.3333
+    },
+    "V1_injected": {
+      "detect": 0.3667
+    },
+    "V4_injected_a": {
+      "detect": 0.3333
+    },
+    "V4_symmetric": {
+      "detect": 0.3
+    }
+  },
+  "iteration_results": [
+    {
+      "iteration": 1,
+      "scenarios": {
+        "clean_session": {
+          "valid": 4,
+          "caught": 0,
+          "missed": 0,
+          "false_alarm": 0,
+          "detect_rate": null,
+          "miss_rate": null,
+          "false_alarm_rate": 0.0
+        },
+        "V1_injected": {
+          "valid": 4,
+          "caught": 2,
+          "missed": 2,
+          "false_alarm": 0,
+          "detect_rate": 0.5,
+          "miss_rate": 0.5,
+          "false_alarm_rate": null
+        },
+        "V4_injected_a": {
+          "valid": 3,
+          "caught": 0,
+          "missed": 3,
+          "false_alarm": 0,
+          "detect_rate": 0.0,
+          "miss_rate": 1.0,
+          "false_alarm_rate": null
+        },
+        "V4_symmetric": {
+          "valid": 5,
+          "caught": 2,
+          "missed": 3,
+          "false_alarm": 0,
+          "detect_rate": 0.4,
+          "miss_rate": 0.6,
+          "false_alarm_rate": null
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "scenarios": {
+        "clean_session": {
+          "valid": 3,
+          "caught": 0,
+          "missed": 0,
+          "false_alarm": 2,
+          "detect_rate": null,
+          "miss_rate": null,
+          "false_alarm_rate": 0.6667
+        },
+        "V1_injected": {
+          "valid": 5,
+          "caught": 3,
+          "missed": 2,
+          "false_alarm": 0,
+          "detect_rate": 0.6,
+          "miss_rate": 0.4,
+          "false_alarm_rate": null
+        },
+        "V4_injected_a": {
+          "valid": 3,
+          "caught": 3,
+          "missed": 0,
+          "false_alarm": 0,
+          "detect_rate": 1.0,
+          "miss_rate": 0.0,
+          "false_alarm_rate": null
+        },
+        "V4_symmetric": {
+          "valid": 4,
+          "caught": 2,
+          "missed": 2,
+          "false_alarm": 0,
+          "detect_rate": 0.5,
+          "miss_rate": 0.5,
+          "false_alarm_rate": null
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "scenarios": {
+        "clean_session": {
+          "valid": 0,
+          "caught": 0,
+          "missed": 0,
+          "false_alarm": 0,
+          "detect_rate": null,
+          "miss_rate": null,
+          "false_alarm_rate": null
+        },
+        "V1_injected": {
+          "valid": 2,
+          "caught": 0,
+          "missed": 2,
+          "false_alarm": 0,
+          "detect_rate": 0.0,
+          "miss_rate": 1.0,
+          "false_alarm_rate": null
+        },
+        "V4_injected_a": {
+          "valid": 4,
+          "caught": 0,
+          "missed": 4,
+          "false_alarm": 0,
+          "detect_rate": 0.0,
+          "miss_rate": 1.0,
+          "false_alarm_rate": null
+        },
+        "V4_symmetric": {
+          "valid": 5,
+          "caught": 0,
+          "missed": 5,
+          "false_alarm": 0,
+          "detect_rate": 0.0,
+          "miss_rate": 1.0,
+          "false_alarm_rate": null
+        }
+      }
+    }
+  ]
+}
