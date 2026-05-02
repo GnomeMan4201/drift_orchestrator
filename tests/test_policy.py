@@ -179,7 +179,7 @@ def test_same_role_strict_keeps_model():
 def test_dual_signal_divergence_fails_closed():
     """Both internal drift and external score >= 0.75 triggers immediate fail-closed."""
     from orchestrator.contracts import AuditStatus, FailureClass, RetryAction
-    ticket = _make_ticket()
+    ticket = _ticket()
     audit = AuditResult(
         request_id=ticket.request_id,
         audit_status=AuditStatus.REPLAN_AND_RECODE,

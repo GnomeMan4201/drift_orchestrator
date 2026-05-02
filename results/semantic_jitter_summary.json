@@ -1,0 +1,75 @@
+{
+  "run_at": "2026-04-24T01:41:28.657017+00:00",
+  "experiment": "semantic_jitter",
+  "iteration_results": [
+    {
+      "iteration": 1,
+      "scenarios": {
+        "clean": {
+          "valid": 5,
+          "bypasses": 0,
+          "avg_div": 0.63,
+          "bypass_rate": null
+        },
+        "V4_symmetric": {
+          "valid": 5,
+          "bypasses": 5,
+          "avg_div": 0.0,
+          "bypass_rate": 1.0
+        },
+        "V1_symmetric": {
+          "valid": 2,
+          "bypasses": 0,
+          "avg_div": 0.2,
+          "bypass_rate": 0.0
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "scenarios": {
+        "clean": {
+          "valid": 3,
+          "bypasses": 0,
+          "avg_div": 0.4167,
+          "bypass_rate": null
+        },
+        "V4_symmetric": {
+          "valid": 2,
+          "bypasses": 2,
+          "avg_div": 0.0,
+          "bypass_rate": 1.0
+        },
+        "V1_symmetric": {
+          "valid": 0,
+          "bypasses": 0,
+          "avg_div": 0,
+          "bypass_rate": null
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "scenarios": {
+        "clean": {
+          "valid": 3,
+          "bypasses": 0,
+          "avg_div": 0.5333,
+          "bypass_rate": null
+        },
+        "V4_symmetric": {
+          "valid": 2,
+          "bypasses": 2,
+          "avg_div": 0.0,
+          "bypass_rate": 1.0
+        },
+        "V1_symmetric": {
+          "valid": 3,
+          "bypasses": 0,
+          "avg_div": 0.17,
+          "bypass_rate": 0.0
+        }
+      }
+    }
+  ]
+}

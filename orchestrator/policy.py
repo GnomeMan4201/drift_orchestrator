@@ -1,165 +1,140 @@
+"""
+drift_orchestrator — orchestrator/policy.py
+Translates AuditResult into a PolicyDecision: what to do next.
+"""
 from __future__ import annotations
-from orchestrator.contracts import (
-    AuditResult, AuditStatus, FailureClass,
-    MAX_RETRY_ATTEMPTS, ModelRole, RetryAction, RouterTicket,
+
+from dataclasses import dataclass, field
+
+from .contracts import (
+    AuditResult,
+    AuditStatus,
+    FailureClass,
+    MAX_RETRY_ATTEMPTS,
+    RetryAction,
+    RouterTicket,
 )
-from orchestrator.registry import registry
-from analysis.trace_logger import log_retry, log_block
+
+# Ordered model rotation pool used by RETRY_ALTERNATE_MODEL
+_MODEL_POOL: list[str] = [
+    "mistral:latest",
+    "llama3.1:latest",
+    "phi3:latest",
+]
+
+# Dual-signal divergence threshold: if BOTH internal and external
+# scores meet or exceed this value, fail closed immediately.
+_DUAL_SIGNAL_THRESHOLD: float = 0.75
 
 
+@dataclass
 class PolicyDecision:
-    def __init__(
-        self,
-        action: RetryAction,
-        next_model_name: str | None,
-        should_replan: bool,
-        fail_closed: bool,
-        reason: str,
-    ) -> None:
-        self.action = action
-        self.next_model_name = next_model_name
-        self.should_replan = should_replan
-        self.fail_closed = fail_closed
-        self.reason = reason
-
-    def __repr__(self) -> str:
-        return (
-            "PolicyDecision(action=" + self.action.value
-            + " next_model=" + str(self.next_model_name)
-            + " replan=" + str(self.should_replan)
-            + " fail_closed=" + str(self.fail_closed) + ")"
-        )
+    action:          RetryAction
+    fail_closed:     bool  = False
+    should_replan:   bool  = False
+    next_model_name: str | None = None
+    reason:          str   = ""
 
 
 def decide(
     ticket: RouterTicket,
-    audit_result: AuditResult,
-    current_model_name: str,
+    audit: AuditResult,
+    current_model: str,
     attempt: int,
 ) -> PolicyDecision:
-    if audit_result.audit_status == AuditStatus.PASS:
+    """
+    Produce a PolicyDecision given the current audit result and attempt context.
+
+    Decision priority:
+      1. Risk injection              → immediate fail_closed
+      2. Dual-signal divergence      → immediate fail_closed
+      3. Retry budget exhausted      → fail_closed
+      4. PASS                        → PASS decision
+      5. REPLAN_AND_RECODE           → should_replan=True
+      6. RETRY_SAME_ROLE_STRICT      → same model, no replan
+      7. RETRY_ALTERNATE_MODEL       → next model in pool, or fail_closed
+      8. FAIL_CLOSED (other)         → fail_closed
+    """
+
+    # 1 — Risk injection always fails closed immediately
+    if audit.failure_class == FailureClass.RISK_INJECTION:
+        return PolicyDecision(
+            action=RetryAction.FAIL_CLOSED,
+            fail_closed=True,
+            reason="risk injection detected",
+        )
+
+    # 2 — Dual-signal divergence
+    if (
+        audit.drift_score >= _DUAL_SIGNAL_THRESHOLD
+        and audit.external_score >= _DUAL_SIGNAL_THRESHOLD
+    ):
+        return PolicyDecision(
+            action=RetryAction.FAIL_CLOSED,
+            fail_closed=True,
+            reason=(
+                f"dual-signal divergence: drift={audit.drift_score}, "
+                f"external={audit.external_score}"
+            ),
+        )
+
+    # 3 — Budget exhausted
+    if attempt >= MAX_RETRY_ATTEMPTS:
+        return PolicyDecision(
+            action=RetryAction.FAIL_CLOSED,
+            fail_closed=True,
+            reason=f"retry budget exhausted at attempt {attempt}",
+        )
+
+    # 4 — Pass
+    if audit.audit_status == AuditStatus.PASS:
         return PolicyDecision(
             action=RetryAction.PASS,
-            next_model_name=current_model_name,
-            should_replan=False,
             fail_closed=False,
-            reason="audit passed",
+            next_model_name=current_model,
         )
 
-    if audit_result.failure_class == FailureClass.RISK_INJECTION:
-        log_block(
-            request_id=ticket.request_id,
-            reason="risk_injection detected",
-            failure_class=FailureClass.RISK_INJECTION.value,
-            attempts=attempt,
-        )
+    # 5 — Replan
+    if audit.next_action == RetryAction.REPLAN_AND_RECODE:
         return PolicyDecision(
-            action=RetryAction.FAIL_CLOSED,
-            next_model_name=None,
-            should_replan=False,
-            fail_closed=True,
-            reason="risk_injection: immediate fail-closed",
-        )
-
-    if attempt >= MAX_RETRY_ATTEMPTS:
-        log_block(
-            request_id=ticket.request_id,
-            reason="retry budget exhausted",
-            failure_class=(
-                audit_result.failure_class.value
-                if audit_result.failure_class else "unknown"
-            ),
-            attempts=attempt,
-        )
-        return PolicyDecision(
-            action=RetryAction.FAIL_CLOSED,
-            next_model_name=None,
-            should_replan=False,
-            fail_closed=True,
-            reason="retry budget exhausted after " + str(attempt) + " attempts",
-        )
-
-    action = audit_result.next_action
-    failure_class = audit_result.failure_class
-
-    if action == RetryAction.REPLAN_AND_RECODE:
-        next_model = registry.next_model(ModelRole.CODER, current_model_name)
-        next_name = next_model.name if next_model else current_model_name
-        log_retry(
-            request_id=ticket.request_id,
-            attempt=attempt,
-            action=action.value,
-            from_model=current_model_name,
-            to_model=next_name,
-            failure_class=failure_class.value if failure_class else "unknown",
-        )
-        return PolicyDecision(
-            action=action,
-            next_model_name=next_name,
+            action=RetryAction.REPLAN_AND_RECODE,
             should_replan=True,
-            fail_closed=False,
-            reason="planner_violation: re-plan and re-code",
+            next_model_name=current_model,
+            reason="planner spec violated; replan required",
         )
 
-    if action == RetryAction.RETRY_ALTERNATE_MODEL:
-        next_model = registry.next_model(ModelRole.CODER, current_model_name)
-        if next_model is None:
-            log_block(
-                request_id=ticket.request_id,
-                reason="no alternate model available",
-                failure_class=failure_class.value if failure_class else "unknown",
-                attempts=attempt,
-            )
+    # 6 — Retry same role strict (keep model)
+    if audit.next_action == RetryAction.RETRY_SAME_ROLE_STRICT:
+        return PolicyDecision(
+            action=RetryAction.RETRY_SAME_ROLE_STRICT,
+            next_model_name=current_model,
+            reason="strict retry on same role",
+        )
+
+    # 7 — Alternate model rotation
+    if audit.next_action == RetryAction.RETRY_ALTERNATE_MODEL:
+        try:
+            idx = _MODEL_POOL.index(current_model)
+        except ValueError:
+            idx = -1
+
+        next_idx = idx + 1
+        if next_idx >= len(_MODEL_POOL):
             return PolicyDecision(
                 action=RetryAction.FAIL_CLOSED,
-                next_model_name=None,
-                should_replan=False,
                 fail_closed=True,
-                reason="no alternate coder model available",
+                reason=f"no alternate models remaining after {current_model}",
             )
-        log_retry(
-            request_id=ticket.request_id,
-            attempt=attempt,
-            action=action.value,
-            from_model=current_model_name,
-            to_model=next_model.name,
-            failure_class=failure_class.value if failure_class else "unknown",
-        )
+
         return PolicyDecision(
-            action=action,
-            next_model_name=next_model.name,
-            should_replan=False,
-            fail_closed=False,
-            reason="switching to alternate coder: " + next_model.name,
+            action=RetryAction.RETRY_ALTERNATE_MODEL,
+            next_model_name=_MODEL_POOL[next_idx],
+            reason=f"switching from {current_model} to {_MODEL_POOL[next_idx]}",
         )
 
-    if action == RetryAction.RETRY_SAME_ROLE_STRICT:
-        log_retry(
-            request_id=ticket.request_id,
-            attempt=attempt,
-            action=action.value,
-            from_model=current_model_name,
-            to_model=current_model_name,
-            failure_class=failure_class.value if failure_class else "unknown",
-        )
-        return PolicyDecision(
-            action=action,
-            next_model_name=current_model_name,
-            should_replan=False,
-            fail_closed=False,
-            reason="retry same role with stricter constraints",
-        )
-
-    log_block(
-        request_id=ticket.request_id,
-        reason="unknown retry action: " + action.value,
-        failure_class=failure_class.value if failure_class else "unknown",
-        attempts=attempt,
-    )
+    # 8 — Any remaining FAIL_CLOSED
     return PolicyDecision(
         action=RetryAction.FAIL_CLOSED,
-        next_model_name=None,
-        should_replan=False,
         fail_closed=True,
-        reason="unhandled retry action: " + action.value,
+        reason=str(audit.audit_status),
     )
