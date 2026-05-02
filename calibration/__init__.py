@@ -41,3 +41,5 @@ __all__ = [
     "GuardedTrigger",
     "process_calibration_event",
 ]
+
+from .pipeline import observe as observe_calibration, drop_session as drop_calibration_session

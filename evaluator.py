@@ -10,6 +10,7 @@ from session_manager import create_session, append_turn, create_checkpoint
 from metrics import CompositeDensityScorer, sliding_token_windows, compute_repetition_score
 from embeddings import goal_drift, anchor_drift
 from policy import PolicyEngine
+from calibration.pipeline import observe_calibration
 from verifier import verify_imports, verify_signatures, verify_cli_flags, detect_hallucinations, detect_prompt_injection
 import external_evaluator
 import log_emitter
@@ -182,6 +183,12 @@ def evaluate_turns(session_id, branch_id, turns, start_index=0, report=True, _to
         emit_hallucination_findings(session_id, last_tid, hal)
         emit_injection_findings(session_id, last_tid, inj)
         emit_policy_finding(session_id, last_tid, action, alpha, reason)
+        observe_calibration(
+            last_turn_index, alpha, embed_score,
+            session_id=session_id,
+            window_text=window_text,
+            action=action,
+        )
         div_val = ext_divergence if ext_divergence is not None else 0.0
         print(f"[TURN {last_turn_index}] alpha={alpha:.4f} divergence={div_val:.4f} status={action}", flush=True)
 
