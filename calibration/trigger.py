@@ -49,7 +49,7 @@ class CalibrationTrigger:
 
     @property
     def is_armed(self) -> bool:
-        return len(self.history) >= self.window_size
+        return len(self.history) >= self.window_size and self.hit_count >= self.required_hits
 
     def reset(self) -> None:
         """
