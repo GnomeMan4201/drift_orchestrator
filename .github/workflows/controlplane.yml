@@ -1,0 +1,115 @@
+name: Control-Plane CI
+
+on:
+  push:
+    paths:
+      - "controlplane/**"
+      - "drifttop.py"
+      - "tests/test_controlplane_*.py"
+      - "docs/controlplane_contract.md"
+      - ".github/workflows/controlplane.yml"
+  pull_request:
+    paths:
+      - "controlplane/**"
+      - "drifttop.py"
+      - "tests/test_controlplane_*.py"
+      - "docs/controlplane_contract.md"
+      - ".github/workflows/controlplane.yml"
+
+jobs:
+  controlplane:
+    name: Control-Plane Protection Boundary
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          # Install textual only if drifttop tests need it; CLI/datasource layers
+          # must pass without it.
+          pip install textual || true
+
+      # -----------------------------------------------------------------------
+      # Layer 1: compile check
+      # Verifies that all control-plane modules and drifttop.py parse cleanly.
+      # No imports are executed here — pure syntax validation.
+      # -----------------------------------------------------------------------
+      - name: Compile check — controlplane modules
+        run: python3 -m py_compile controlplane/__init__.py controlplane/journal.py controlplane/invariants.py controlplane/replay.py controlplane/datasource.py controlplane/cli.py
+
+      - name: Compile check — drifttop.py
+        run: python3 -m py_compile drifttop.py
+
+      # -----------------------------------------------------------------------
+      # Layer 2: focused control-plane tests
+      # These tests do NOT require Textual for the CLI/datasource/journal layers.
+      # They exercise the full control-plane pipeline independently of the TUI.
+      # -----------------------------------------------------------------------
+      - name: Test — journal persistence layer
+        run: pytest tests/test_controlplane_journal.py -v
+
+      - name: Test — invariant rule layer
+        run: pytest tests/test_controlplane_invariants.py -v
+
+      - name: Test — replay and report layer
+        run: pytest tests/test_controlplane_replay.py -v
+
+      - name: Test — status formatting helpers
+        run: pytest tests/test_controlplane_status_formatting.py -v
+
+      - name: Test — datasource boundary
+        run: pytest tests/test_controlplane_datasource.py -v
+
+      - name: Test — CLI commands
+        run: pytest tests/test_controlplane_cli.py -v
+
+      - name: Test — CLI smoke (end-to-end pipeline)
+        run: pytest tests/test_controlplane_cli_smoke.py -v
+
+      - name: Test — contract document
+        run: pytest tests/test_controlplane_contract_docs.py -v
+
+      # -----------------------------------------------------------------------
+      # Layer 3: live smoke run
+      # Executes the full pipeline as an operator would — journal write,
+      # invariant evaluation, JSONL export, Markdown report — in one command.
+      # Exits 0 on success; any pipeline failure fails the workflow.
+      # -----------------------------------------------------------------------
+      - name: Smoke run — full pipeline without Textual
+        run: |
+          mkdir -p /tmp/ci_exports
+          python3 -m controlplane.cli \
+            --journal /tmp/ci_controlplane.db \
+            --exports /tmp/ci_exports \
+            smoke
+
+      - name: Verify smoke output files exist
+        run: |
+          ls /tmp/ci_exports/action_log_smoke_*.jsonl
+          ls /tmp/ci_exports/session_smoke_*_report.md
+
+      # -----------------------------------------------------------------------
+      # Layer 4: Textual boundary assertion
+      # The CLI and datasource layers must not import Textual.
+      # This catches accidental Textual leakage into headless code paths.
+      # -----------------------------------------------------------------------
+      - name: Assert CLI does not import Textual
+        run: |
+          python3 - << 'EOF'
+          import sys
+          from controlplane import cli, datasource, invariants, journal, replay
+          textual_mods = [k for k in sys.modules if "textual" in k.lower()]
+          if textual_mods:
+              print("FAIL: Textual imported by control-plane module:", textual_mods)
+              sys.exit(1)
+          print("PASS: no Textual in sys.modules after importing all control-plane modules")
+          EOF
