@@ -39,3 +39,9 @@ examples/*_collab.jsonl
 
 # local graph venv
 .venv_graph/
+
+# Control-plane generated artifacts
+exports/
+*.sqlite
+*.sqlite3
+*.db
