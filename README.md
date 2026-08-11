@@ -25,13 +25,15 @@
 
 drift_orchestrator started as a drift-detection tool and became a security research program. It implements a multi-signal LLM session monitor and uses that monitor as an experimental platform to find, characterize, and document vulnerabilities in LLM safety architectures.
 
-The repository contains the probe implementations, committed experiment outputs, consolidated findings, threat model, research log, and long-form writeups used to support the published research.
+The repository contains the probe implementations, committed experiment outputs, consolidated findings, threat model, research log, long-form writeups, and a public Ollama-compatible HTTP adapter for fresh experiment reruns.
 
 ## Reproducibility boundary
 
-The **public evidence package is self-contained for inspection and automated repository verification**: the committed scripts, results, analysis material, and tests are available here.
+The **public evidence package is self-contained for inspection and automated repository verification**: the committed scripts, results, analysis material, adapter, and tests are available here.
 
-A **fresh rerun of the historical model experiments is not currently self-contained**. Those probes used three local HTTP gateway instances provided by a sibling `localai_gateway` implementation that is currently private. [`REPLICATE.md`](REPLICATE.md) documents the exact boundary, endpoint contract, reference environment, historical results, and what can be independently checked from this repository today.
+Fresh model-experiment reruns no longer require the private sibling `localai_gateway` repository. [`gateway_adapter.py`](gateway_adapter.py) implements the `/route` and `/health` contract expected by the historical probe scripts and can be run as three local instances against Ollama. [`REPLICATE.md`](REPLICATE.md) contains the exact launch commands.
+
+The recorded experiments were originally produced with the historical private gateway implementation. The public adapter is contract-compatible, not a claim that a new run is byte-for-byte identical to the historical runtime. Model versions, Ollama versions, sampling behavior, hardware, and other runtime differences can change results.
 
 Do not treat a green CI run as an independent replication of the model experiments.
 
@@ -57,7 +59,7 @@ Signal A: geometric drift (sentence-transformers embeddings)
 Signal B: LLM coherence evaluator (qwen/mistral/phi3 via Ollama)
 Governor: dual-signal arbitration with policy boost
 Gateway contract: local HTTP inference/control endpoints
-Telemetry: SQLite session logging
+Telemetry: SQLite session logging in the historical gateway path
 ```
 
 ---
@@ -115,7 +117,9 @@ python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
-For fresh model-experiment reruns, follow [`REPLICATE.md`](REPLICATE.md). It documents the three-gateway requirement rather than implying that the private historical gateway is included here.
+The test suite includes an offline contract check for the public gateway adapter. It does not contact Ollama or claim to reproduce model outputs.
+
+For fresh model-experiment reruns, follow [`REPLICATE.md`](REPLICATE.md).
 
 ---
 
@@ -127,7 +131,7 @@ For fresh model-experiment reruns, follow [`REPLICATE.md`](REPLICATE.md). It doc
 - [x] Second-order injection — evaluator override in the tested architecture
 - [x] Cross-model generalization — phi3 resistance and tuned bypass
 - [x] Vector transfer — transfer across the tested model set
-- [ ] Public gateway adapter — self-contained fresh rerun path
+- [x] Public gateway adapter — self-contained fresh rerun path
 - [ ] Adaptive injection — feedback-loop attack
 - [ ] Evaluator isolation — architectural defense design
 - [ ] Formal model — mathematical characterization of injectability
@@ -140,7 +144,7 @@ For fresh model-experiment reruns, follow [`REPLICATE.md`](REPLICATE.md). It doc
 |----------|----------|
 | [FINDINGS.md](FINDINGS.md) | Empirical results and recorded model/vector outcomes |
 | [THREAT_MODEL.md](THREAT_MODEL.md) | Attacker profile, attack surface, defender assumptions |
-| [REPLICATE.md](REPLICATE.md) | Public verification and fresh-rerun boundary |
+| [REPLICATE.md](REPLICATE.md) | Public verification and fresh-rerun instructions |
 | [RESEARCH_LOG.md](RESEARCH_LOG.md) | Chronological record of runs, findings, and dead ends |
 | [CHANGELOG.md](CHANGELOG.md) | Material research changes |
 | [papers/second_order_injection.md](papers/second_order_injection.md) | Long-form research paper |
