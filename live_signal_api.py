@@ -17,15 +17,20 @@ GET  /snapshot/{session_id}   — latest snapshot, specific session
 POST /score                   — push scores to a session (or default)
 POST /register/{session_id}   — create/touch a session stream entry
 
-Run:
-    uvicorn live_signal_api:app --port 8765 --reload
+Local development:
+    uvicorn live_signal_api:app --host 127.0.0.1 --port 8765 --reload
+
+The API has no authentication layer and is intended for a local research
+control surface. Binding it beyond loopback changes the threat model and
+must be an explicit operator decision.
 """
 
 from __future__ import annotations
 
-import json
 import asyncio
+import json
 import logging
+import os
 from typing import AsyncIterator, Dict, Optional
 
 from fastapi import FastAPI, Request, HTTPException
@@ -192,4 +197,8 @@ async def _sse_generator(request: Request, session_id: str) -> AsyncIterator[str
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("live_signal_api:app", host="0.0.0.0", port=8765, reload=True)
+
+    host = os.environ.get("DRIFT_SIGNAL_HOST", "127.0.0.1")
+    port = int(os.environ.get("DRIFT_SIGNAL_PORT", "8765"))
+    reload_enabled = os.environ.get("DRIFT_SIGNAL_RELOAD", "0") == "1"
+    uvicorn.run("live_signal_api:app", host=host, port=port, reload=reload_enabled)
