@@ -25,6 +25,10 @@ Historical versions of `verifier/python_imports.py` used `importlib.import_modul
 
 `gateway_adapter.py` is intended for local experiment reruns. It binds to `127.0.0.1` by default and forwards prompts to the configured Ollama endpoint. Exposing the adapter on a non-loopback interface changes the threat model and should be treated as an explicit operator decision.
 
+### Live signal API
+
+`live_signal_api.py` exposes unauthenticated session, snapshot, SSE, registration, and score-update endpoints for the local research dashboard. Its development entrypoint binds to `127.0.0.1` by default. Setting `DRIFT_SIGNAL_HOST` to a non-loopback address exposes a control surface that can alter telemetry state and therefore changes the threat model; do not expose it to untrusted networks without adding an appropriate authentication/authorization layer.
+
 ### External model APIs
 
 Modes that use external model providers can send message content to those providers and read credentials from environment variables. Never commit API keys or assume locally handled research data remains local when an external-provider mode is enabled.
