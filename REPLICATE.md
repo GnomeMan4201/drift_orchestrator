@@ -2,16 +2,16 @@
 
 Reproduction and verification instructions for the second-order-injection experiment set.
 
-Tested reference environment: Pop!_OS 22.04, Python 3.11, Ollama.
+Tested historical reference environment: Pop!_OS 22.04, Python 3.11, Ollama.
 
-## Public reproducibility status
+## Reproducibility surfaces
 
-There are two different reproducibility surfaces in this project and they should not be conflated:
+There are two different things to reproduce:
 
-1. **Public checkout verification** — clone this repository, install its dependencies, run its automated tests, inspect committed scripts/results, and validate the analysis code. This path is fully available from the public repository.
-2. **Fresh model-experiment reruns** — the historical probe scripts in this document expect three HTTP gateway instances compatible with the `GATEWAY_A_URL`, `GATEWAY_B_URL`, and `GATEWAY_C_URL` interface. The sibling `localai_gateway` implementation used for the published runs is currently private, so the exact historical gateway environment is **not publicly reproducible from this repository alone**.
+1. **Repository/evidence verification** — inspect the committed scripts and outputs and run the automated tests. This is deterministic within the repository's test contracts.
+2. **Fresh model-experiment reruns** — run the probe scripts against local model instances. This path is now publicly self-contained at the code level through [`gateway_adapter.py`](gateway_adapter.py), but LLM inference remains nondeterministic and depends on the installed Ollama/model/runtime versions.
 
-Do not report the second path as publicly self-contained unless that gateway implementation is made public or replaced by an equivalent public adapter with validated behavior.
+The historical published runs used a sibling `localai_gateway` implementation. The public adapter implements the same `/route` and `/health` contract needed by these probes; it is not a claim that a new runtime is byte-for-byte identical to the historical gateway environment.
 
 ---
 
@@ -30,7 +30,7 @@ cd drift_orchestrator
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ### 3. Run the repository tests
@@ -38,6 +38,8 @@ pip install -r requirements.txt
 ```bash
 python -m pytest -q
 ```
+
+The suite includes an offline contract test for `gateway_adapter.py`; it does not contact Ollama or reproduce model behavior.
 
 ### 4. Inspect the committed experiment evidence
 
@@ -52,15 +54,13 @@ RESEARCH_LOG.md
 papers/       long-form research writeups
 ```
 
-This verifies the committed implementation/evidence package. It does not create an independent fresh rerun of the model experiments.
-
 ---
 
 ## B. Fresh experiment reruns
 
-### Prerequisites
+### 1. Install and prepare Ollama
 
-Install Ollama and pull the reference model families:
+Install Ollama using its platform-specific instructions, then pull the three reference model families:
 
 ```bash
 ollama pull qwen2.5:3b
@@ -68,19 +68,39 @@ ollama pull mistral
 ollama pull phi3:mini
 ```
 
-The repository also contains an OpenAI-compatible/Ollama backend implementation for other project paths, but the historical second-order-injection scripts below are wired to the three gateway URL variables and should not be silently treated as equivalent without validation.
+Record the exact Ollama version and model identifiers/digests before comparing a fresh run with the historical artifacts.
 
-### Gateway requirement
+### 2. Start three public gateway-adapter instances
 
-Provide three compatible local HTTP gateways on ports 8765–8767, configured for the corresponding models. The implementation used for the original runs was `localai_gateway`, which is not currently public.
+Each historical probe targets a fixed local URL. Start one adapter per model:
 
-Once compatible gateways are available, verify them before starting a probe:
+```bash
+GATEWAY_PORT=8765 GATEWAY_MODEL=qwen2.5:3b \
+  .venv/bin/python gateway_adapter.py > results/gateway-qwen.log 2>&1 &
+
+GATEWAY_PORT=8766 GATEWAY_MODEL=mistral \
+  .venv/bin/python gateway_adapter.py > results/gateway-mistral.log 2>&1 &
+
+GATEWAY_PORT=8767 GATEWAY_MODEL=phi3:mini \
+  .venv/bin/python gateway_adapter.py > results/gateway-phi3.log 2>&1 &
+```
+
+The adapter binds to `127.0.0.1` by default and calls Ollama at `http://127.0.0.1:11434`. Override those explicitly if needed:
+
+```bash
+export OLLAMA_HOST=http://127.0.0.1:11434
+export GATEWAY_HOST=127.0.0.1
+```
+
+### 3. Verify the gateway contract
 
 ```bash
 curl -fsS http://127.0.0.1:8765/health | python3 -m json.tool
 curl -fsS http://127.0.0.1:8766/health | python3 -m json.tool
 curl -fsS http://127.0.0.1:8767/health | python3 -m json.tool
 ```
+
+Confirm that the reported model on each port matches the intended model before running experiments.
 
 Then export the endpoints:
 
@@ -176,7 +196,19 @@ Do not require a fresh nondeterministic run to reproduce every historical percen
 - whether mitigation changes the expected vulnerable/resistant ordering
 - whether result differences can be explained by model/runtime/version changes
 
-Record model hashes/versions, gateway implementation, parameters, timestamps, hardware, and all errors for a meaningful rerun.
+Record:
+
+- repository commit
+- `gateway_adapter.py` commit
+- Python version
+- Ollama version
+- exact model identifiers/digests
+- gateway environment variables
+- hardware
+- timestamps
+- raw results and errors
+
+That is the minimum evidence needed to distinguish replication differences from environment drift.
 
 ---
 
