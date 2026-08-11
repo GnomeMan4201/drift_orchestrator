@@ -2,6 +2,8 @@
 
 Threat intelligence feed format. Each release documents new findings, confirmed vulnerabilities, defense developments.
 
+> **Interpretation note:** historical entries preserve the terminology used when the experiments were recorded. Phrases such as “universal payload,” “all models,” or “structural” in older entries refer to transfer or behavior across the specific tested model set and architecture available at that time. They are not claims that every model, version, prompt, or safety architecture is vulnerable. Current scope and replication boundaries are defined in [`README.md`](README.md), [`FINDINGS.md`](FINDINGS.md), and [`REPLICATE.md`](REPLICATE.md).
+
 ---
 
 ## [Unreleased] — In Progress
