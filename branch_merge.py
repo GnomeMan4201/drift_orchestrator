@@ -4,7 +4,7 @@ import json
 sys.path.insert(0, os.path.dirname(__file__))
 
 from sqlite_store import fetch_rows, fetch_one, insert_row
-from session_manager import create_branch, create_session
+from session_manager import create_session
 from utils import now_iso, uid
 
 
@@ -195,7 +195,7 @@ def merge_sessions(session_id_a, branch_id_a, session_id_b, branch_id_b,
 
 def print_session_ranking(session_ids):
     ranked = rank_sessions(session_ids)
-    print(f"\n  SESSION RANKING")
+    print("\n  SESSION RANKING")
     print(f"  {'─' * 72}")
     print(f"  {'SESSION':<10} {'LABEL':<12} {'TURNS':>6} {'AVG α':>8} {'MAX α':>8} {'ROLLBACKS':>10} {'HIGH':>6}")
     print(f"  {'─' * 72}")
@@ -233,8 +233,3 @@ def print_branch_report(session_id):
         print(f"  best: {best['branch_id'][:8]}... avg α={best['avg_alpha']:.4f}")
     print()
     return ranked
-
-
-def fetch_one(table, where_clause="", params=None):
-    from sqlite_store import fetch_one as _fetch_one
-    return _fetch_one(table, where_clause, params)
