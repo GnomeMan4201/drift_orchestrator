@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ratchet Pyflakes debt without hiding the existing baseline."""
+"""Enforce an exact, monotonic Pyflakes debt baseline."""
 
 from __future__ import annotations
 
@@ -86,6 +86,15 @@ def regressions(current: Counter[str], baseline: Counter[str]) -> dict[str, tupl
     }
 
 
+def reductions(current: Counter[str], baseline: Counter[str]) -> dict[str, tuple[int, int]]:
+    """Return baseline allowances that can now be tightened."""
+    return {
+        key: (allowed, current.get(key, 0))
+        for key, allowed in baseline.items()
+        if current.get(key, 0) < allowed
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -118,10 +127,17 @@ def main() -> int:
         print("Fix the new diagnostic; do not expand the baseline in routine PRs.")
         return 1
 
-    removed = sum((baseline - current).values())
+    reduced = reductions(current, baseline)
+    if reduced:
+        print("Pyflakes debt was reduced, but the committed baseline is now stale:")
+        for key, (allowed, observed) in sorted(reduced.items()):
+            print(f"  {allowed} -> {observed}: {key}")
+        print("Tighten the baseline in this PR so removed debt cannot be reintroduced later.")
+        return 1
+
     print(
-        f"Pyflakes ratchet passed: {sum(current.values())} current diagnostics; "
-        f"{removed} baseline diagnostic occurrence(s) removed."
+        f"Pyflakes ratchet passed exactly: {sum(current.values())} diagnostics "
+        f"across {len(current)} normalized classes."
     )
     return 0
 
