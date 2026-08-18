@@ -54,34 +54,11 @@ jobs:
           print(f"Validated {len(files)} Python files recursively")
           PY
 
-      - name: Report Pyflakes debt (advisory; tracked in issue #5)
-        run: |
-          python - <<'PY'
-          import pathlib
-          import subprocess
-          import sys
+      - name: Test Pyflakes debt-ratchet logic
+        run: python -m unittest tests.test_pyflakes_baseline -v
 
-          excluded_parts = {".git", ".venv", "venv", "__pycache__"}
-          files = sorted(
-              path
-              for path in pathlib.Path(".").rglob("*.py")
-              if not any(part in excluded_parts for part in path.parts)
-          )
-          proc = subprocess.run(
-              [sys.executable, "-m", "pyflakes", *map(str, files)],
-              capture_output=True,
-              text=True,
-              check=False,
-          )
-          output = (proc.stdout + proc.stderr).strip()
-          if output:
-              print(output)
-          else:
-              print("No Pyflakes diagnostics.")
-          print()
-          print("Pyflakes is advisory while the existing backlog is burned down in issue #5.")
-          print("Recursive syntax validation above remains a hard gate.")
-          PY
+      - name: Enforce Pyflakes debt ratchet
+        run: python tools/check_pyflakes_baseline.py --baseline .github/pyflakes-baseline.json
 
   gateway-contract:
     runs-on: ubuntu-latest
