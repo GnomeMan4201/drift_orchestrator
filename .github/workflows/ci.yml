@@ -10,33 +10,68 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  python-validation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install minimal deps
-        run: pip install pyflakes
-      - name: Syntax check
+
+      - name: Install static-analysis dependencies
+        run: python -m pip install pyflakes
+
+      - name: Recursively validate Python syntax and non-allowlisted lint diagnostics
         run: |
-          python -m pyflakes *.py 2>&1 | grep -v "undefined name" || true
           python - <<'PY'
           import ast
           import pathlib
+          import subprocess
           import sys
 
-          errors = []
-          for file in pathlib.Path('.').glob('*.py'):
-              try:
-                  ast.parse(file.read_text())
-              except SyntaxError as exc:
-                  errors.append(f"{file}: {exc}")
-          if errors:
-              print("\n".join(errors))
+          excluded_parts = {".git", ".venv", "venv", "__pycache__"}
+          files = sorted(
+              path
+              for path in pathlib.Path(".").rglob("*.py")
+              if not any(part in excluded_parts for part in path.parts)
+          )
+
+          if not files:
+              print("No Python files found")
               sys.exit(1)
-          print("All top-level Python files parse cleanly")
+
+          syntax_errors = []
+          for file in files:
+              try:
+                  ast.parse(file.read_text(encoding="utf-8"), filename=str(file))
+              except (SyntaxError, UnicodeDecodeError) as exc:
+                  syntax_errors.append(f"{file}: {exc}")
+
+          if syntax_errors:
+              print("Python syntax validation failed:")
+              print("\n".join(syntax_errors))
+              sys.exit(1)
+
+          proc = subprocess.run(
+              [sys.executable, "-m", "pyflakes", *map(str, files)],
+              capture_output=True,
+              text=True,
+              check=False,
+          )
+          diagnostics = [
+              line
+              for line in (proc.stdout + proc.stderr).splitlines()
+              if line.strip() and "undefined name" not in line
+          ]
+
+          if diagnostics:
+              print("Pyflakes reported non-allowlisted diagnostics:")
+              print("\n".join(diagnostics))
+              sys.exit(1)
+
+          print(f"Validated {len(files)} Python files recursively")
+          if proc.returncode:
+              print("Note: existing 'undefined name' diagnostics remain allowlisted for now.")
           PY
 
   gateway-contract:
