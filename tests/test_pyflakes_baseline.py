@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from collections import Counter
 
-from tools.check_pyflakes_baseline import normalize_diagnostics, regressions
+from tools.check_pyflakes_baseline import normalize_diagnostics, reductions, regressions
 
 
 class PyflakesBaselineTests(unittest.TestCase):
@@ -35,10 +35,19 @@ class PyflakesBaselineTests(unittest.TestCase):
             {"agent.py: warning": (1, 2)},
         )
 
-    def test_debt_reduction_is_allowed(self) -> None:
+    def test_debt_reduction_requires_baseline_tightening(self) -> None:
         baseline = Counter({"agent.py: warning": 2})
         current = Counter({"agent.py: warning": 1})
+        self.assertEqual(
+            reductions(current, baseline),
+            {"agent.py: warning": (2, 1)},
+        )
+
+    def test_exact_baseline_has_no_regressions_or_reductions(self) -> None:
+        baseline = Counter({"agent.py: warning": 1})
+        current = Counter({"agent.py: warning": 1})
         self.assertEqual(regressions(current, baseline), {})
+        self.assertEqual(reductions(current, baseline), {})
 
 
 if __name__ == "__main__":
