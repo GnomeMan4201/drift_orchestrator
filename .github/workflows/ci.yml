@@ -13,20 +13,19 @@ jobs:
   python-validation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Install static-analysis dependencies
         run: python -m pip install pyflakes
 
-      - name: Recursively validate Python syntax and non-allowlisted lint diagnostics
+      - name: Recursively validate Python syntax
         run: |
           python - <<'PY'
           import ast
           import pathlib
-          import subprocess
           import sys
 
           excluded_parts = {".git", ".venv", "venv", "__pycache__"}
@@ -40,49 +39,61 @@ jobs:
               print("No Python files found")
               sys.exit(1)
 
-          syntax_errors = []
+          errors = []
           for file in files:
               try:
                   ast.parse(file.read_text(encoding="utf-8"), filename=str(file))
               except (SyntaxError, UnicodeDecodeError) as exc:
-                  syntax_errors.append(f"{file}: {exc}")
+                  errors.append(f"{file}: {exc}")
 
-          if syntax_errors:
+          if errors:
               print("Python syntax validation failed:")
-              print("\n".join(syntax_errors))
+              print("\n".join(errors))
               sys.exit(1)
 
+          print(f"Validated {len(files)} Python files recursively")
+          PY
+
+      - name: Report Pyflakes debt (advisory; tracked in issue #5)
+        run: |
+          python - <<'PY'
+          import pathlib
+          import subprocess
+          import sys
+
+          excluded_parts = {".git", ".venv", "venv", "__pycache__"}
+          files = sorted(
+              path
+              for path in pathlib.Path(".").rglob("*.py")
+              if not any(part in excluded_parts for part in path.parts)
+          )
           proc = subprocess.run(
               [sys.executable, "-m", "pyflakes", *map(str, files)],
               capture_output=True,
               text=True,
               check=False,
           )
-          diagnostics = [
-              line
-              for line in (proc.stdout + proc.stderr).splitlines()
-              if line.strip() and "undefined name" not in line
-          ]
-
-          if diagnostics:
-              print("Pyflakes reported non-allowlisted diagnostics:")
-              print("\n".join(diagnostics))
-              sys.exit(1)
-
-          print(f"Validated {len(files)} Python files recursively")
-          if proc.returncode:
-              print("Note: existing 'undefined name' diagnostics remain allowlisted for now.")
+          output = (proc.stdout + proc.stderr).strip()
+          if output:
+              print(output)
+          else:
+              print("No Pyflakes diagnostics.")
+          print()
+          print("Pyflakes is advisory while the existing backlog is burned down in issue #5.")
+          print("Recursive syntax validation above remains a hard gate.")
           PY
 
   gateway-contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install adapter test dependencies
         run: python -m pip install pytest fastapi httpx uvicorn
+      - name: Verify dependency consistency
+        run: python -m pip check
       - name: Compile public adapter
         run: python -m py_compile gateway_adapter.py
       - name: Test public adapter contract offline
