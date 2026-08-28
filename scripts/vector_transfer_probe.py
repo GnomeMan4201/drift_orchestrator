@@ -5,9 +5,9 @@ vector_transfer_probe.py
 Tests whether V4 (reasoning capture) -- discovered by attacking phi3 --
 transfers to qwen2.5:3b and mistral without modification.
 
-If V4 transfers: a vector discovered on one model works universally.
-Attacker can probe the weakest/most observable model to find vectors,
-then deploy against all models simultaneously.
+If V4 transfers: a vector discovered on one tested model also works on
+the other tested configurations without modification. This is evidence of
+within-set transfer, not universal behavior.
 
 If V4 does not transfer: attack surface is model-specific, requiring
 per-model vector tuning. Still exploitable but more expensive.
