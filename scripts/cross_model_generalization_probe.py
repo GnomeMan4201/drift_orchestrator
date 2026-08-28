@@ -5,7 +5,8 @@ cross_model_generalization_probe.py
 Chapter 2: Tests whether second-order injection generalizes
 to phi3:mini -- a third model family distinct from qwen and mistral.
 
-If phi3:mini is injectable, the vulnerability is likely universal.
+If phi3:mini is injectable, the result extends observed susceptibility to
+this third tested configuration; it does not establish universal behavior.
 If phi3:mini resists, we have model-specific variance worth characterizing.
 
 Also tests phi3:mini as a coupled third system to measure whether
