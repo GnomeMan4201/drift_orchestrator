@@ -54,6 +54,9 @@ jobs:
           print(f"Validated {len(files)} Python files recursively")
           PY
 
+      - name: Verify research claim lineage
+        run: python tools/verify_research_claims.py
+
       - name: Test Pyflakes debt-ratchet logic
         run: python -m unittest tests.test_pyflakes_baseline -v
 
