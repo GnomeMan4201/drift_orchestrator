@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/GnomeMan4201/drift_orchestrator/blob/main/research/schemas/claims.v1.schema.json",
+  "title": "Second-Order Injection claim ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "claims"],
+  "properties": {
+    "schema_version": {"const": "claims.v1"},
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/claim"}
+    }
+  },
+  "$defs": {
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "op"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "op": {"enum": ["eq", "not_in", "is_number"]},
+        "value": {}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"op": {"enum": ["eq", "not_in"]}}},
+          "then": {"required": ["value"]}
+        }
+      ]
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_n", "valid_n", "error_n", "skipped_n"],
+      "properties": {
+        "total_n": {"type": "integer", "minimum": 0},
+        "valid_n": {"type": "integer", "minimum": 0},
+        "success_n": {"type": "integer", "minimum": 0},
+        "error_n": {"type": "integer", "minimum": 0},
+        "skipped_n": {"type": "integer", "minimum": 0},
+        "rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "mean": {"type": "number"}
+      }
+    },
+    "derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "derivation_id",
+        "kind",
+        "source",
+        "filters",
+        "valid_when",
+        "error_when",
+        "expected"
+      ],
+      "properties": {
+        "derivation_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{2,127}$"
+        },
+        "kind": {"enum": ["binary_rate", "numeric_mean"]},
+        "source": {
+          "type": "string",
+          "pattern": "^results/[A-Za-z0-9._/-]+\\.jsonl$"
+        },
+        "filters": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/predicate"}
+        },
+        "valid_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/predicate"}
+        },
+        "success_when": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/predicate"}
+        },
+        "error_when": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/predicate"}
+        },
+        "value_path": {"type": "string", "minLength": 1},
+        "expected": {"$ref": "#/$defs/expected"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "binary_rate"}}},
+          "then": {
+            "required": ["success_when"],
+            "properties": {
+              "expected": {"required": ["success_n", "rate"]}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"kind": {"const": "numeric_mean"}}},
+          "then": {
+            "required": ["value_path"],
+            "properties": {
+              "expected": {"required": ["mean"]}
+            }
+          }
+        }
+      ]
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_id",
+        "status",
+        "statement",
+        "scope",
+        "limitations",
+        "derivations"
+      ],
+      "properties": {
+        "claim_id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9][A-Z0-9-]{2,127}$"
+        },
+        "status": {
+          "enum": ["supported", "mixed", "negative", "superseded"]
+        },
+        "statement": {"type": "string", "minLength": 1},
+        "scope": {"type": "string", "minLength": 1},
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "derivations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/derivation"}
+        }
+      }
+    }
+  }
+}
