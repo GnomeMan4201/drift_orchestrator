@@ -20,6 +20,22 @@ class VerificationError(Exception):
     """Raised when evidence or a claim contract cannot be verified."""
 
 
+def ensure_closed_object(
+    label: str,
+    value: Any,
+    required: set[str],
+    allowed: set[str],
+) -> None:
+    if not isinstance(value, dict):
+        raise VerificationError(f"{label} must be an object")
+    missing = required - value.keys()
+    unknown = value.keys() - allowed
+    if missing:
+        raise VerificationError(f"{label} missing fields: {sorted(missing)}")
+    if unknown:
+        raise VerificationError(f"{label} has unknown fields: {sorted(unknown)}")
+
+
 def read_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -67,6 +83,12 @@ def get_path(value: Any, dotted_path: str) -> Any:
 
 
 def predicate_matches(row: dict[str, Any], predicate: dict[str, Any]) -> bool:
+    ensure_closed_object(
+        "predicate",
+        predicate,
+        {"path", "op"},
+        {"path", "op", "value"},
+    )
     path = predicate.get("path")
     op = predicate.get("op")
     if not isinstance(path, str) or not path:
@@ -161,6 +183,34 @@ def derive(root: Path, derivation: dict[str, Any]) -> dict[str, Any]:
     valid_when = derivation.get("valid_when")
     error_when = derivation.get("error_when")
     expected = derivation.get("expected")
+    ensure_closed_object(
+        f"derivation {derivation_id}",
+        derivation,
+        {
+            "derivation_id",
+            "kind",
+            "source",
+            "filters",
+            "valid_when",
+            "error_when",
+            "expected",
+        },
+        {
+            "derivation_id",
+            "kind",
+            "source",
+            "filters",
+            "valid_when",
+            "success_when",
+            "error_when",
+            "value_path",
+            "expected",
+        },
+    )
+    if kind == "binary_rate" and "success_when" not in derivation:
+        raise VerificationError(f"{derivation_id}: missing success_when")
+    if kind == "numeric_mean" and "value_path" not in derivation:
+        raise VerificationError(f"{derivation_id}: missing value_path")
     if not isinstance(filters, list):
         raise VerificationError(f"{derivation_id}: filters must be a list")
     if not isinstance(valid_when, list) or not valid_when:
@@ -169,6 +219,17 @@ def derive(root: Path, derivation: dict[str, Any]) -> dict[str, Any]:
         raise VerificationError(f"{derivation_id}: error_when must be a list")
     if not isinstance(expected, dict):
         raise VerificationError(f"{derivation_id}: expected must be an object")
+    required_expected = {"total_n", "valid_n", "error_n", "skipped_n"}
+    if kind == "binary_rate":
+        required_expected |= {"success_n", "rate"}
+    else:
+        required_expected.add("mean")
+    ensure_closed_object(
+        f"{derivation_id} expected",
+        expected,
+        required_expected,
+        {"total_n", "valid_n", "success_n", "error_n", "skipped_n", "rate", "mean"},
+    )
 
     source_path = safe_source(root, derivation.get("source"))
     source_rows = read_jsonl(source_path)
@@ -222,7 +283,13 @@ def derive(root: Path, derivation: dict[str, Any]) -> dict[str, Any]:
 
 def verify(root: Path, ledger_path: Path) -> dict[str, Any]:
     ledger = read_json(ledger_path)
-    if not isinstance(ledger, dict) or ledger.get("schema_version") != "claims.v1":
+    ensure_closed_object(
+        "claim ledger",
+        ledger,
+        {"schema_version", "claims"},
+        {"schema_version", "claims"},
+    )
+    if ledger.get("schema_version") != "claims.v1":
         raise VerificationError("claim ledger schema_version must be claims.v1")
     claims = ledger.get("claims")
     if not isinstance(claims, list) or not claims:
@@ -234,14 +301,31 @@ def verify(root: Path, ledger_path: Path) -> dict[str, Any]:
     failures: list[str] = []
 
     for claim in claims:
-        if not isinstance(claim, dict):
-            raise VerificationError("claim entries must be objects")
+        ensure_closed_object(
+            "claim",
+            claim,
+            {"claim_id", "status", "statement", "scope", "limitations", "derivations"},
+            {"claim_id", "status", "statement", "scope", "limitations", "derivations"},
+        )
         claim_id = claim.get("claim_id")
         if not isinstance(claim_id, str) or not claim_id:
             raise VerificationError("claim_id must be a non-empty string")
         if claim_id in seen_claims:
             raise VerificationError(f"duplicate claim_id: {claim_id}")
         seen_claims.add(claim_id)
+        if claim.get("status") not in {"supported", "mixed", "negative", "superseded"}:
+            raise VerificationError(f"{claim_id}: unsupported status")
+        if not isinstance(claim.get("statement"), str) or not claim["statement"]:
+            raise VerificationError(f"{claim_id}: statement must be non-empty")
+        if not isinstance(claim.get("scope"), str) or not claim["scope"]:
+            raise VerificationError(f"{claim_id}: scope must be non-empty")
+        limitations = claim.get("limitations")
+        if (
+            not isinstance(limitations, list)
+            or not limitations
+            or any(not isinstance(item, str) or not item for item in limitations)
+        ):
+            raise VerificationError(f"{claim_id}: limitations must be non-empty strings")
 
         derivations = claim.get("derivations")
         if not isinstance(derivations, list) or not derivations:
